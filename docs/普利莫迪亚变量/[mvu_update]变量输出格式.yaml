@@ -1,0 +1,33 @@
+<context>
+NOTE: 请新建一个名为 `[mvu_update]变量输出格式` 的 D0 条目，将代码块中的内容复制到该条目中
+```yaml
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
+      - replace: replace the value of existing paths
+      - delta: update the value of existing number paths by a delta value
+      - insert: insert new items into an object or array
+      - remove
+    - don't update field names starts with `_` as they are readonly, such as `_变量`
+    - only update variables according to the current assistant reply and clearly implied consequences of the user action
+    - if a cooking, drink-making, sauce-making, serving, shopping, farming, cellar, room, map-travel, or relationship event happens, include the corresponding variable updates in the same JSONPatch
+  format: |-
+    <UpdateVariable>
+    <Analysis>$(IN ENGLISH, no more than 80 words)
+    - ${calculate time passed: ...}
+    - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
+    - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}
+    </Analysis>
+    <JSONPatch>
+    [
+      { "op": "replace", "path": "${/path/to/variable}", "value": "${new_value}" },
+      { "op": "delta", "path": "${/path/to/number/variable}", "value": ${positive_or_negative_delta} },
+      { "op": "insert", "path": "${/path/to/object/new_key}", "value": "${new_value}" },
+      { "op": "remove", "path": "${/path/to/array/0}" }
+    ]
+    </JSONPatch>
+    </UpdateVariable>
+```
+</context>

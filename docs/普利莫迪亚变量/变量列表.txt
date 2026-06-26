@@ -1,0 +1,9 @@
+<context>
+NOTE: 请新建一个名为 `变量列表` 的 D0 条目，将代码块中的内容复制到该条目中
+```yaml
+---
+<status_current_variable>
+{{format_message_variable::stat_data}}
+</status_current_variable>
+```
+</context>

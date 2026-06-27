@@ -135,7 +135,10 @@ const bundle = () => {
 };
 const bundle_debounced = _.debounce(bundle, 500, { leading: true, trailing: false });
 function tavern_sync(compiler: webpack.Compiler) {
+<<<<<<< HEAD
   if (process.env.SKIP_TAVERN_SYNC === '1') return;
+=======
+>>>>>>> 4f0b745981550e95a66a32adf5b43f01a2cde104
   if (!compiler.options.watch) {
     bundle_debounced();
     return;
@@ -525,11 +528,14 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         return callback();
       }
 
+<<<<<<< HEAD
       const should_bundle_runtime = entry.script.includes(`src${path.sep}普利莫迪亚${path.sep}`);
       if (should_bundle_runtime && ['vue', 'pinia', 'yaml'].includes(request)) {
         return callback();
       }
 
+=======
+>>>>>>> 4f0b745981550e95a66a32adf5b43f01a2cde104
       if (
         request.startsWith('-') ||
         request.startsWith('.') ||

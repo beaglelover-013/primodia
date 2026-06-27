@@ -69,19 +69,19 @@ async function maskFrontendLoaderMessagesForGeneration() {
 
   const lastMessageId = getLastMessageId();
   const messages = getChatMessages(`0-${Math.max(0, lastMessageId)}`, { role: 'all', hide_state: 'all' });
-  const bootMessage = messages.find(message => message.message_id === BOOT_MESSAGE_ID && isFrontendLoaderMessage(message.message));
   const leakedScriptMessages = messages.filter(
     message => message.message_id !== BOOT_MESSAGE_ID && isFrontendLoaderMessage(message.message),
   );
 
   const updates: Array<Partial<ChatMessage> & { message_id: number }> = [];
-  if (bootMessage) {
-    updates.push({
-      message_id: BOOT_MESSAGE_ID,
-      message: FRONTEND_LOADER_PLACEHOLDER,
-    });
-  }
+  const originals: Array<Partial<ChatMessage> & { message_id: number }> = [];
   for (const message of leakedScriptMessages) {
+    originals.push({
+      message_id: message.message_id,
+      message: message.message,
+      is_hidden: message.is_hidden,
+      extra: message.extra,
+    });
     updates.push({
       message_id: message.message_id,
       is_hidden: true,
@@ -100,16 +100,8 @@ async function maskFrontendLoaderMessagesForGeneration() {
   if (updates.length > 0) await setChatMessages(updates, { refresh: 'none' });
 
   return async () => {
-    if (!bootMessage || typeof setChatMessages !== 'function') return;
-    await setChatMessages(
-      [
-        {
-          message_id: BOOT_MESSAGE_ID,
-          message: bootMessage.message,
-        },
-      ],
-      { refresh: 'none' },
-    );
+    if (originals.length === 0 || typeof setChatMessages !== 'function') return;
+    await setChatMessages(originals, { refresh: 'none' });
   };
 }
 

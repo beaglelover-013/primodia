@@ -215,6 +215,12 @@ async function refreshNpcActivityWorldbook() {
   await game.refreshNpcActivityWorldbookLibrary();
 }
 
+async function ensureNpcActivityWorldbook() {
+  await game.ensureNpcActivityWorldbook();
+  npcActivityBindingWorldbook.value = game.npcActivityWorldbookBindings[0]?.worldbookName ?? '';
+  npcActivityBindingUid.value = String(game.npcActivityWorldbookBindings[0]?.uid ?? '');
+}
+
 async function saveNpcActivityBinding() {
   const uid = Number(npcActivityBindingUid.value);
   const ok = await game.setNpcActivityWorldbookBinding(npcActivityBindingWorldbook.value, uid);
@@ -286,6 +292,12 @@ async function copyNpcActivityTemplate() {
 
 async function refreshWeatherWorldbook() {
   await game.refreshWeatherWorldbookLibrary();
+}
+
+async function ensureWeatherWorldbook() {
+  await game.ensureWeatherWorldbook();
+  weatherBindingWorldbook.value = game.weatherWorldbookBindings[0]?.worldbookName ?? '';
+  weatherBindingUid.value = String(game.weatherWorldbookBindings[0]?.uid ?? '');
 }
 
 async function saveWeatherBinding() {
@@ -657,6 +669,9 @@ async function importSaveFile(event: Event) {
             <button class="pm-btn sm" @click="openWeatherBindWorldbook">
               <PmIcon name="scroll" :size="12" /> 选择天气池条目
             </button>
+            <button class="pm-btn sm" @click="ensureWeatherWorldbook">
+              <PmIcon name="check" :size="12" /> 自动创建/绑定默认天气池
+            </button>
             <button class="pm-btn sm ghost" @click="refreshBoundWeatherWorldbook">
               <PmIcon name="scroll" :size="12" /> 读取绑定条目
             </button>
@@ -769,6 +784,9 @@ async function importSaveFile(event: Event) {
             </button>
             <button class="pm-btn sm" @click="openNpcActivityBindWorldbook">
               <PmIcon name="scroll" :size="12" /> 选择行为库条目
+            </button>
+            <button class="pm-btn sm" @click="ensureNpcActivityWorldbook">
+              <PmIcon name="check" :size="12" /> 自动创建/绑定行为库
             </button>
             <button class="pm-btn sm ghost" @click="refreshBoundNpcActivityWorldbook">
               <PmIcon name="scroll" :size="12" /> 读取绑定条目

@@ -1,9 +1,14 @@
 import { parse } from 'yaml';
 import { PRIMORDIA_WEATHER_TEMPLATE_BY_MONTH, type PrimordiaWeatherEntry } from '../data/weather';
 import {
+  getPrimaryCharacterWorldbookName,
   loadActiveWorldbookEntries,
+  loadWorldbookEntryByName,
   loadWorldbookEntry,
   getWorldbookEntryName,
+  saveWorldbookEntry,
+  upsertWorldbookEntryByName,
+  type EditableWorldbookEntry,
   type WorldbookEntryRef,
   type WorldbookEntrySearchItem,
 } from './worldbookService';
@@ -27,6 +32,13 @@ export interface WeatherWorldbookStats {
   monthWeatherCounts: Array<{ month: string; count: number }>;
   errors: string[];
 }
+
+export interface WeatherWorldbookBinding extends WorldbookEntryRef {
+  entryName: string;
+  updatedAt?: number;
+}
+
+export const WEATHER_WORLDBOOK_ENTRY_NAME = '【普利莫迪亚｜天气池｜自动维护】';
 
 const BLOCK_RE = /<\s*PrimordiaWeatherPool\b[^>]*>([\s\S]*?)<\s*\/\s*PrimordiaWeatherPool\s*>/gi;
 
@@ -231,4 +243,48 @@ export function fullWeatherWorldbookTemplate() {
 export function monthWeatherWorldbookTemplate(monthName: string) {
   const template = formatWeatherTemplate(PRIMORDIA_WEATHER_TEMPLATE_BY_MONTH, monthName);
   return template.includes(`${monthName}:`) ? template : weatherWorldbookFormatTemplate();
+}
+
+function weatherWorldbookEntrySeed(content = fullWeatherWorldbookTemplate()): Partial<EditableWorldbookEntry> {
+  return {
+    name: WEATHER_WORLDBOOK_ENTRY_NAME,
+    comment: WEATHER_WORLDBOOK_ENTRY_NAME,
+    enabled: true,
+    content,
+    strategy: {
+      type: 'selective',
+      keys: ['PrimordiaWeatherPool', '天气池', '天气库'],
+      keys_secondary: { logic: 'and_any', keys: [] },
+      scan_depth: 'same_as_global',
+    },
+    position: {
+      type: 'at_depth',
+      role: 'system',
+      depth: 4,
+      order: 100,
+    },
+  };
+}
+
+export async function ensureWeatherWorldbookBinding(worldbookName = ''): Promise<WeatherWorldbookBinding> {
+  const targetWorldbook = String(worldbookName || getPrimaryCharacterWorldbookName() || '').trim();
+  if (!targetWorldbook) throw new Error('没有可写入的角色主世界书，无法自动创建天气池条目。');
+
+  const existing = await loadWorldbookEntryByName(targetWorldbook, WEATHER_WORLDBOOK_ENTRY_NAME);
+  const entry = existing
+    ? existing.enabled
+      ? existing
+      : await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: true })
+    : await upsertWorldbookEntryByName(
+        targetWorldbook,
+        WEATHER_WORLDBOOK_ENTRY_NAME,
+        weatherWorldbookEntrySeed(),
+      );
+
+  return {
+    worldbookName: targetWorldbook,
+    uid: Number(entry.uid),
+    entryName: WEATHER_WORLDBOOK_ENTRY_NAME,
+    updatedAt: Date.now(),
+  };
 }

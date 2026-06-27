@@ -1,8 +1,13 @@
 import { parse } from 'yaml';
 import {
+  getPrimaryCharacterWorldbookName,
   loadActiveWorldbookEntries,
+  loadWorldbookEntryByName,
   loadWorldbookEntry,
   getWorldbookEntryName,
+  saveWorldbookEntry,
+  upsertWorldbookEntryByName,
+  type EditableWorldbookEntry,
   type WorldbookEntryRef,
   type WorldbookEntrySearchItem,
 } from './worldbookService';
@@ -31,6 +36,13 @@ export interface NpcActivityWorldbookStats {
   regionBehaviorCounts: Array<{ region: string; count: number }>;
   errors: string[];
 }
+
+export interface NpcActivityWorldbookBinding extends WorldbookEntryRef {
+  entryName: string;
+  updatedAt?: number;
+}
+
+export const NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME = '【普利莫迪亚｜伪活人化行为库｜自动维护】';
 
 const BLOCK_RE = /<\s*PrimordiaNpcActivities\b[^>]*>([\s\S]*?)<\s*\/\s*PrimordiaNpcActivities\s*>/gi;
 
@@ -223,4 +235,48 @@ conversationTopics: [${tavernNpcConversationTopics.join(', ')}]
 
 restBehaviors: [${tavernNpcRestActivities.join(', ')}]
 </PrimordiaNpcActivities>`;
+}
+
+function npcActivityWorldbookEntrySeed(content = npcActivityWorldbookTemplate()): Partial<EditableWorldbookEntry> {
+  return {
+    name: NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
+    comment: NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
+    enabled: true,
+    content,
+    strategy: {
+      type: 'selective',
+      keys: ['PrimordiaNpcActivities', '伪活人化', '行为库'],
+      keys_secondary: { logic: 'and_any', keys: [] },
+      scan_depth: 'same_as_global',
+    },
+    position: {
+      type: 'at_depth',
+      role: 'system',
+      depth: 4,
+      order: 100,
+    },
+  };
+}
+
+export async function ensureNpcActivityWorldbookBinding(worldbookName = ''): Promise<NpcActivityWorldbookBinding> {
+  const targetWorldbook = String(worldbookName || getPrimaryCharacterWorldbookName() || '').trim();
+  if (!targetWorldbook) throw new Error('没有可写入的角色主世界书，无法自动创建伪活人化行为库条目。');
+
+  const existing = await loadWorldbookEntryByName(targetWorldbook, NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME);
+  const entry = existing
+    ? existing.enabled
+      ? existing
+      : await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: true })
+    : await upsertWorldbookEntryByName(
+        targetWorldbook,
+        NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
+        npcActivityWorldbookEntrySeed(),
+      );
+
+  return {
+    worldbookName: targetWorldbook,
+    uid: Number(entry.uid),
+    entryName: NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
+    updatedAt: Date.now(),
+  };
 }

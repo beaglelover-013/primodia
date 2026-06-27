@@ -42,12 +42,14 @@ import {
   type OpeningStoryDraft,
 } from '../services/openingWorkshop';
 import {
+  ensureNpcActivityWorldbookBinding,
   loadNpcActivityLibraryFromBoundWorldbookEntries,
   loadNpcActivityLibraryFromActiveWorldbooks,
   npcActivityWorldbookTemplate,
   type NpcActivityWorldbookLibrary,
 } from '../services/npcActivityWorldbook';
 import {
+  ensureWeatherWorldbookBinding,
   fullWeatherWorldbookTemplate,
   loadWeatherLibraryFromActiveWorldbooks,
   loadWeatherLibraryFromBoundWorldbookEntries,
@@ -1799,6 +1801,41 @@ export const useGameStore = defineStore('primordia', () => {
     return true;
   }
 
+  async function ensureNpcActivityWorldbook(worldbookName = openingSave.value?.worldbookName || '') {
+    try {
+      const binding = await ensureNpcActivityWorldbookBinding(worldbookName);
+      npcActivityWorldbookBindings.value = [{
+        worldbookName: binding.worldbookName,
+        uid: binding.uid,
+      }];
+      npcActivityWorldbookStatus.value = `伪活人化行为库条目已创建/绑定：${binding.worldbookName} · uid ${binding.uid}`;
+      npcActivityWorldbookErrors.value = [];
+      const ok = await refreshNpcActivityWorldbookLibraryFromBindings();
+      if (ok) npcActivityEnabled.value = true;
+      markLocalStateDirty();
+      await writeChatSave();
+      pushLog('系统', `伪活人化行为库已自动创建/绑定 · ${binding.worldbookName} · uid ${binding.uid}`, {
+        source: 'engine',
+        authoritative: true,
+        tone: 'cyan',
+        actionType: 'NPC_ACTIVITY_WORLDBOOK',
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '伪活人化行为库自动创建/绑定失败。';
+      npcActivityWorldbookStatus.value = message;
+      npcActivityWorldbookErrors.value = [message];
+      pushLog('提示', message, {
+        source: 'engine',
+        authoritative: true,
+        tone: 'amber',
+        actionType: 'NPC_ACTIVITY_WORLDBOOK',
+      });
+      await writeChatSave();
+      return false;
+    }
+  }
+
   async function clearNpcActivityWorldbookBindings() {
     npcActivityWorldbookBindings.value = [];
     npcActivityWorldbookLibrary.value = null;
@@ -1979,6 +2016,39 @@ export const useGameStore = defineStore('primordia', () => {
     return true;
   }
 
+  async function ensureWeatherWorldbook(worldbookName = openingSave.value?.worldbookName || '') {
+    try {
+      const binding = await ensureWeatherWorldbookBinding(worldbookName);
+      weatherWorldbookBindings.value = [{
+        worldbookName: binding.worldbookName,
+        uid: binding.uid,
+      }];
+      weatherWorldbookStatus.value = `天气池条目已创建/绑定：${binding.worldbookName} · uid ${binding.uid}`;
+      weatherWorldbookErrors.value = [];
+      const ok = await refreshWeatherWorldbookLibraryFromBindings();
+      markLocalStateDirty();
+      await writeChatSave();
+      pushLog('系统', `天气池已自动创建/绑定 · ${binding.worldbookName} · uid ${binding.uid}`, {
+        source: 'engine',
+        authoritative: true,
+        tone: ok ? 'cyan' : 'amber',
+      });
+      return ok;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '天气池自动创建/绑定失败。';
+      weatherWorldbookStatus.value = message;
+      weatherWorldbookErrors.value = [message];
+      clearWeatherForDay();
+      pushLog('提示', message, {
+        source: 'engine',
+        authoritative: true,
+        tone: 'amber',
+      });
+      await writeChatSave();
+      return false;
+    }
+  }
+
   async function clearWeatherWorldbookBindings() {
     weatherWorldbookBindings.value = [];
     weatherWorldbookLibrary.value = null;
@@ -1987,6 +2057,34 @@ export const useGameStore = defineStore('primordia', () => {
     clearWeatherForDay();
     markLocalStateDirty();
     await writeChatSave();
+  }
+
+  async function ensureDefaultWorldbookModules(worldbookName = openingSave.value?.worldbookName || '') {
+    const targetWorldbook = String(worldbookName || '').trim();
+    if (!targetWorldbook) return false;
+
+    let weatherOk = false;
+    let npcActivityOk = false;
+
+    if (weatherWorldbookBindings.value.length > 0) {
+      weatherOk = await refreshWeatherWorldbookLibraryFromBindings();
+    } else {
+      weatherOk = await ensureWeatherWorldbook(targetWorldbook);
+    }
+
+    if (npcActivityWorldbookBindings.value.length > 0) {
+      npcActivityOk = await refreshNpcActivityWorldbookLibraryFromBindings();
+      if (npcActivityOk && !npcActivityEnabled.value) {
+        npcActivityEnabled.value = true;
+        npcActivityWorldbookStatus.value = '伪活人化已默认开启。';
+        markLocalStateDirty();
+        await writeChatSave();
+      }
+    } else {
+      npcActivityOk = await ensureNpcActivityWorldbook(targetWorldbook);
+    }
+
+    return weatherOk || npcActivityOk;
   }
 
   async function ensureTurnContextWorldbook() {
@@ -6200,6 +6298,7 @@ export const useGameStore = defineStore('primordia', () => {
     };
     turnContextWorldbookBinding.value = clonePlain(worldbookResult.turnContextBinding);
     turnContextWorldbookStatus.value = `本回合发送包条目已绑定：${worldbookResult.turnContextBinding.worldbookName} · uid ${worldbookResult.turnContextBinding.uid}`;
+    await ensureDefaultWorldbookModules(draft.worldbookName);
     openingCompleted.value = true;
     openingRequired.value = false;
     openingWorkshopForced.value = false;
@@ -7393,6 +7492,9 @@ export const useGameStore = defineStore('primordia', () => {
   const syncedFromMvu = loadFromMvu({ force: true });
   if ((!restoredFromChatSave || heroines.value.length === 0) && !syncedFromMvu) loadFromMvu({ force: true });
   if (restoredFromChatSave && heroines.value.length > 0 && (openingCompleted.value || hasStartedNarrativeAfterBoot())) void writeChatSave();
+  if (openingSave.value?.worldbookName && (openingCompleted.value || hasStartedNarrativeAfterBoot())) {
+    void ensureDefaultWorldbookModules(openingSave.value.worldbookName);
+  }
   lastTickAt.value = Date.now();
 
   /* 发送行动草稿到 LLM，并静默创建楼层 */
@@ -7776,6 +7878,7 @@ export const useGameStore = defineStore('primordia', () => {
     npcActivitiesForRegion,
     refreshNpcActivityWorldbookLibrary,
     refreshNpcActivityWorldbookLibraryFromBindings,
+    ensureNpcActivityWorldbook,
     setNpcActivityWorldbookBinding,
     clearNpcActivityWorldbookBindings,
     setNpcActivityEnabled,
@@ -7784,6 +7887,7 @@ export const useGameStore = defineStore('primordia', () => {
     weatherLibraryStats,
     refreshWeatherWorldbookLibrary,
     refreshWeatherWorldbookLibraryFromBindings,
+    ensureWeatherWorldbook,
     setWeatherWorldbookBinding,
     clearWeatherWorldbookBindings,
     ensureTurnContextWorldbook,

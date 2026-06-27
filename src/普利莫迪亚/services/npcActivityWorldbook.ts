@@ -241,7 +241,7 @@ function npcActivityWorldbookEntrySeed(content = npcActivityWorldbookTemplate())
   return {
     name: NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
     comment: NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,
-    enabled: true,
+    enabled: false,
     content,
     strategy: {
       type: 'selective',
@@ -265,8 +265,8 @@ export async function ensureNpcActivityWorldbookBinding(worldbookName = ''): Pro
   const existing = await loadWorldbookEntryByName(targetWorldbook, NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME);
   const entry = existing
     ? existing.enabled
-      ? existing
-      : await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: true })
+      ? await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: false })
+      : existing
     : await upsertWorldbookEntryByName(
         targetWorldbook,
         NPC_ACTIVITY_WORLDBOOK_ENTRY_NAME,

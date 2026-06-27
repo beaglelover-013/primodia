@@ -6,6 +6,7 @@ import { findOpeningTerritory, openingRaceOptions, openingTerritories } from '..
 import {
   OPENING_CHARACTER_TEMPLATE_ENTRY,
   OPENING_TAVERN_TEMPLATE_ENTRY,
+  buildFixedOpeningPreset,
   type OpeningGeneratedProfile,
   type OpeningModuleChoice,
   type OpeningStoryDraft,
@@ -505,6 +506,27 @@ async function confirmOpening() {
   }
 }
 
+async function confirmFixedOpening() {
+  if (!world.worldbookName) {
+    error.value = '请先选择要写入的世界书。';
+    return;
+  }
+  const { draft, bundle } = buildFixedOpeningPreset(world.worldbookName);
+  const result = await runTask('正在使用固定开场白创建第 1 层', () =>
+    game.confirmOpeningWorkshop(draft, bundle),
+  );
+  if (result) {
+    missingRegionEntries.value = result.regionResults.filter(item => !item.found).map(item => item.entryName);
+    const missingModules = result.moduleResults.filter(item => !item.foundTarget).map(item => item.entryName);
+    const notes = [
+      missingRegionEntries.value.length ? `未找到区域条目：${missingRegionEntries.value.join('、')}` : '',
+      missingModules.length ? `未找到模块条目：${missingModules.join('、')}` : '',
+    ].filter(Boolean);
+    notice.value = notes.length ? `固定开场白快速开局已完成；${notes.join('；')}。` : '固定开场白快速开局已完成。';
+    game.closeOpeningWorkshop();
+  }
+}
+
 function addModuleChoice() {
   moduleChoices.value.push({ group: '', entryName: '' });
 }
@@ -896,6 +918,7 @@ watch(
           </section>
 
           <footer class="opening-actions">
+            <button class="opening-btn ghost" type="button" :disabled="!!loading || !world.worldbookName" @click="confirmFixedOpening">使用固定开场白快速开局</button>
             <button class="opening-btn ghost" type="button" :disabled="currentStep === 0 || !!loading" @click="prevStep">上一步</button>
             <button v-if="currentStep < 3" class="opening-btn primary" type="button" :disabled="!!loading" @click="nextStep">下一步</button>
             <button v-else class="opening-btn primary" type="button" :disabled="!!loading || !canConfirm" @click="confirmOpening">开始游戏</button>

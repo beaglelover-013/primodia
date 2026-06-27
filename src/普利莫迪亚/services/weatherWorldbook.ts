@@ -249,7 +249,7 @@ function weatherWorldbookEntrySeed(content = fullWeatherWorldbookTemplate()): Pa
   return {
     name: WEATHER_WORLDBOOK_ENTRY_NAME,
     comment: WEATHER_WORLDBOOK_ENTRY_NAME,
-    enabled: true,
+    enabled: false,
     content,
     strategy: {
       type: 'selective',
@@ -273,8 +273,8 @@ export async function ensureWeatherWorldbookBinding(worldbookName = ''): Promise
   const existing = await loadWorldbookEntryByName(targetWorldbook, WEATHER_WORLDBOOK_ENTRY_NAME);
   const entry = existing
     ? existing.enabled
-      ? existing
-      : await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: true })
+      ? await saveWorldbookEntry(targetWorldbook, { ...existing, enabled: false })
+      : existing
     : await upsertWorldbookEntryByName(
         targetWorldbook,
         WEATHER_WORLDBOOK_ENTRY_NAME,

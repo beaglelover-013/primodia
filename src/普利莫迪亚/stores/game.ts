@@ -2066,24 +2066,50 @@ export const useGameStore = defineStore('primordia', () => {
     let weatherOk = false;
     let npcActivityOk = false;
 
-    if (weatherWorldbookBindings.value.length > 0) {
+    try {
+      const binding = await ensureWeatherWorldbookBinding(targetWorldbook);
+      weatherWorldbookBindings.value = [{
+        worldbookName: binding.worldbookName,
+        uid: binding.uid,
+      }];
+      weatherWorldbookStatus.value = `天气池条目已绑定：${binding.worldbookName} · uid ${binding.uid}`;
+      weatherWorldbookErrors.value = [];
       weatherOk = await refreshWeatherWorldbookLibraryFromBindings();
-    } else {
-      weatherOk = await ensureWeatherWorldbook(targetWorldbook);
+      markLocalStateDirty();
+    } catch (error) {
+      weatherOk = weatherWorldbookBindings.value.length > 0
+        ? await refreshWeatherWorldbookLibraryFromBindings()
+        : await ensureWeatherWorldbook(targetWorldbook);
     }
 
-    if (npcActivityWorldbookBindings.value.length > 0) {
+    try {
+      const binding = await ensureNpcActivityWorldbookBinding(targetWorldbook);
+      npcActivityWorldbookBindings.value = [{
+        worldbookName: binding.worldbookName,
+        uid: binding.uid,
+      }];
+      npcActivityWorldbookStatus.value = `伪活人化行为库条目已绑定：${binding.worldbookName} · uid ${binding.uid}`;
+      npcActivityWorldbookErrors.value = [];
       npcActivityOk = await refreshNpcActivityWorldbookLibraryFromBindings();
       if (npcActivityOk && !npcActivityEnabled.value) {
         npcActivityEnabled.value = true;
         npcActivityWorldbookStatus.value = '伪活人化已默认开启。';
-        markLocalStateDirty();
-        await writeChatSave();
       }
-    } else {
-      npcActivityOk = await ensureNpcActivityWorldbook(targetWorldbook);
+      markLocalStateDirty();
+    } catch (error) {
+      if (npcActivityWorldbookBindings.value.length > 0) {
+        npcActivityOk = await refreshNpcActivityWorldbookLibraryFromBindings();
+        if (npcActivityOk && !npcActivityEnabled.value) {
+          npcActivityEnabled.value = true;
+          npcActivityWorldbookStatus.value = '伪活人化已默认开启。';
+          markLocalStateDirty();
+        }
+      } else {
+        npcActivityOk = await ensureNpcActivityWorldbook(targetWorldbook);
+      }
     }
 
+    if (weatherOk || npcActivityOk) await writeChatSave();
     return weatherOk || npcActivityOk;
   }
 
@@ -7972,7 +7998,6 @@ export const useGameStore = defineStore('primordia', () => {
     restoreGeneratedShopFromLatestMessage,
   };
 });
-
 
 
 

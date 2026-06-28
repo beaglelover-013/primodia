@@ -5917,7 +5917,7 @@ export const useGameStore = defineStore('primordia', () => {
     const hasCompletedOpening = Boolean(openingSave.value?.completed || openingCompleted.value);
     const latestStory = loadLatestAssistantMaintext();
     const latestStoryMessageId = Number(latestStory.messageId ?? -1);
-    const hasNarrativeAfterBoot = latestStoryMessageId > 0 && Boolean(latestStory.maintext?.trim());
+    const hasNarrativeAfterBoot = latestStoryMessageId >= 0 && Boolean(latestStory.maintext?.trim());
     const hasLegacyStartedChat = Boolean(
       state.loadedFromSave ||
         successfulNarrationTurn.value > 0 ||
@@ -5936,7 +5936,7 @@ export const useGameStore = defineStore('primordia', () => {
 
   function hasStartedNarrativeAfterBoot() {
     const latestStory = loadLatestAssistantMaintext();
-    return Number(latestStory.messageId ?? -1) > 0 && Boolean(latestStory.maintext?.trim());
+    return Number(latestStory.messageId ?? -1) >= 0 && Boolean(latestStory.maintext?.trim());
   }
 
   function openOpeningWorkshop() {
@@ -7367,6 +7367,28 @@ export const useGameStore = defineStore('primordia', () => {
     return true;
   }
 
+  async function deleteHeroine(heroineId: string) {
+    const heroine = heroines.value.find(item => item.id === heroineId);
+    if (!heroine) return false;
+
+    heroines.value = heroines.value.filter(item => item.id !== heroineId);
+    delete characterWorldbookBindings.value[heroine.id];
+    delete temporaryStates.value.人物[heroine.name];
+    if (selectedHeroineId.value === heroine.id) selectedHeroineId.value = heroines.value[0]?.id ?? null;
+
+    const nextData = buildFrontendMvuSnapshot(`手动删除配角：${heroine.name}`);
+    applyMvuStatData(nextData, { restoreInventory: true });
+    const wroteMessage = await writeCurrentMessageStatData(nextData);
+    await writeChatSave();
+    pushLog('系统', `已删除配角「${heroine.name}」。`, {
+      source: 'engine',
+      authoritative: true,
+      tone: wroteMessage ? 'cyan' : 'amber',
+      actionType: 'CHARACTER_DELETE',
+    });
+    return true;
+  }
+
   async function setFrontendMvuData(data: Record<string, unknown>) {
     const nextData = clonePlainData(data);
     applyMvuStatData(nextData, { restoreInventory: true });
@@ -7961,6 +7983,7 @@ export const useGameStore = defineStore('primordia', () => {
     bindCharacterWorldbookEntry,
     unbindCharacterWorldbookEntry,
     touchCharacterWorldbookBinding,
+    deleteHeroine,
     saveRecipeFromInventoryItem,
     isRecipeSavedForItem,
     recipeShortages,
@@ -7998,9 +8021,6 @@ export const useGameStore = defineStore('primordia', () => {
     restoreGeneratedShopFromLatestMessage,
   };
 });
-
-
-
 
 
 

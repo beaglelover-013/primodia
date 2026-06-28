@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import { useGameStore, type TabId } from '../stores/game';
 import PmIcon from './PmIcon.vue';
 
@@ -11,23 +12,91 @@ interface NavItem {
   badge?: string;
   status?: 'ready' | 'dev';
   sub?: string;
+  quiet?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { id: 'chronicle', name: '编年录', icon: 'ledger', sub: '正文 · 选择', status: 'ready' },
-  { id: 'tavern', name: '酒馆', icon: 'tavern', sub: '主厅 · 房间 · 经营', status: 'ready' },
-  { id: 'protagonist', name: '主角档案', icon: 'heart', sub: '状态 · 厨艺', status: 'ready' },
-  { id: 'inventory', name: '行囊与库房', icon: 'pot', sub: '使用 · 入库 · 炉台', status: 'ready' },
-  { id: 'recipes', name: '配方簿', icon: 'ledger', sub: '复刻 · 记录', status: 'ready' },
-  { id: 'characters', name: '人物羁绊', icon: 'people', sub: '配角 · 羁绊', status: 'ready' },
-  { id: 'gallery', name: '图册画廊', icon: 'map', sub: 'CG · 图床 · 收藏', status: 'ready' },
-  { id: 'map', name: '大地图', icon: 'map', sub: '普利莫迪亚 · 节点', status: 'ready' },
-  { id: 'shop', name: '街坊商铺', icon: 'coin', sub: '店铺 · 货架 · 购买', status: 'ready' },
-  { id: 'ledger', name: '账单', icon: 'ledger', sub: '历史足迹 · 资产', status: 'ready' },
-  { id: 'farm', name: '农田与酒窖', icon: 'farm', sub: '种植 · 陈酿', status: 'ready' },
-  { id: 'variables', name: '变量总览', icon: 'ledger', sub: '正式变量 · 检查', status: 'ready' },
-  { id: 'settings', name: '系统与设置', icon: 'gear', sub: '字体 · 存档 · 健康', status: 'ready' },
+interface NavGroup {
+  id: string;
+  name: string;
+  icon: string;
+  sub: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    id: 'chronicles',
+    name: '编年录',
+    icon: 'ledger',
+    sub: '正文 · 选择 · 约定',
+    items: [{ id: 'chronicle', name: '编年录', icon: 'ledger', sub: '正文 · 选择', status: 'ready' }],
+  },
+  {
+    id: 'tavern',
+    name: '酒馆经营',
+    icon: 'tavern',
+    sub: '区域 · 商铺 · 账单',
+    items: [
+      { id: 'tavern', name: '酒馆', icon: 'tavern', sub: '主厅 · 房间 · 经营', status: 'ready' },
+      { id: 'shop', name: '街坊商铺', icon: 'coin', sub: '店铺 · 货架 · 购买', status: 'ready' },
+      { id: 'ledger', name: '账单', icon: 'ledger', sub: '历史足迹 · 资产', status: 'ready' },
+    ],
+  },
+  {
+    id: 'people',
+    name: '人物',
+    icon: 'people',
+    sub: '主角 · 配角',
+    items: [
+      { id: 'protagonist', name: '主角档案', icon: 'heart', sub: '状态 · 厨艺', status: 'ready' },
+      { id: 'characters', name: '人物羁绊', icon: 'people', sub: '配角 · 羁绊', status: 'ready' },
+    ],
+  },
+  {
+    id: 'craft',
+    name: '物资工坊',
+    icon: 'pot',
+    sub: '行囊 · 配方 · 农酿',
+    items: [
+      { id: 'inventory', name: '行囊与库房', icon: 'pot', sub: '使用 · 入库 · 炉台', status: 'ready' },
+      { id: 'recipes', name: '配方簿', icon: 'ledger', sub: '复刻 · 记录', status: 'ready' },
+      { id: 'farm', name: '农田与酒窖', icon: 'farm', sub: '种植 · 陈酿', status: 'ready' },
+    ],
+  },
+  {
+    id: 'world',
+    name: '世界与资料',
+    icon: 'map',
+    sub: '地图 · 图册 · 后台',
+    items: [
+      { id: 'map', name: '大地图', icon: 'map', sub: '普利莫迪亚 · 节点', status: 'ready' },
+      { id: 'gallery', name: '图册画廊', icon: 'map', sub: 'CG · 图床 · 收藏', status: 'ready' },
+      { id: 'variables', name: '变量总览', icon: 'ledger', sub: '正式变量 · 检查', status: 'ready', quiet: true },
+      { id: 'settings', name: '系统与设置', icon: 'gear', sub: '字体 · 存档 · 健康', status: 'ready', quiet: true },
+    ],
+  },
 ];
+
+function groupForTab(id: TabId) {
+  return navGroups.find(group => group.items.some(item => item.id === id)) ?? navGroups[0];
+}
+
+const activeGroupId = ref(groupForTab(game.currentTab).id);
+const activeGroup = computed(() => navGroups.find(group => group.id === activeGroupId.value) ?? groupForTab(game.currentTab));
+
+watch(
+  () => game.currentTab,
+  tab => {
+    activeGroupId.value = groupForTab(tab).id;
+  },
+);
+
+function selectGroup(group: NavGroup) {
+  activeGroupId.value = group.id;
+  if (group.items.length === 1 || window.matchMedia?.('(max-width: 760px)').matches) {
+    switchTab(group.items[0].id);
+  }
+}
 
 function switchTab(id: TabId) {
   game.currentTab = id;
@@ -42,23 +111,43 @@ function switchTab(id: TabId) {
 
     <nav class="nav">
       <button
-        v-for="item in navItems"
-        :id="`nav-${item.id}`"
-        :key="item.id"
-        class="nav-item"
-        :class="{ active: game.currentTab === item.id }"
-        @click="switchTab(item.id)"
+        v-for="group in navGroups"
+        :id="`nav-group-${group.id}`"
+        :key="group.id"
+        class="nav-item nav-group"
+        :class="{ active: activeGroup.id === group.id }"
+        @click="selectGroup(group)"
       >
         <span class="nav-icon">
-          <PmIcon :name="item.icon" :size="20" />
+          <PmIcon :name="group.icon" :size="20" />
         </span>
         <span class="nav-text">
-          <span class="nav-name">{{ item.name }}</span>
-          <span class="nav-sub">{{ item.sub }}</span>
+          <span class="nav-name">{{ group.name }}</span>
+          <span class="nav-sub">{{ group.sub }}</span>
         </span>
-        <span v-if="item.status === 'dev'" class="nav-badge dev">开发中</span>
         <span class="nav-cursor"></span>
       </button>
+
+      <div class="sub-nav">
+        <button
+          v-for="item in activeGroup.items"
+          :id="`nav-${item.id}`"
+          :key="item.id"
+          class="nav-item sub-item"
+          :class="{ active: game.currentTab === item.id, quiet: item.quiet }"
+          @click="switchTab(item.id)"
+        >
+          <span class="nav-icon">
+            <PmIcon :name="item.icon" :size="17" />
+          </span>
+          <span class="nav-text">
+            <span class="nav-name">{{ item.name }}</span>
+            <span class="nav-sub">{{ item.sub }}</span>
+          </span>
+          <span v-if="item.status === 'dev'" class="nav-badge dev">开发中</span>
+          <span class="nav-cursor"></span>
+        </button>
+      </div>
     </nav>
 
     <div class="scroll-foot">
@@ -120,6 +209,14 @@ function switchTab(id: TabId) {
   padding: 8px;
   gap: 4px;
   overflow-y: auto;
+}
+
+.sub-nav {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px 14px;
+  padding: 6px 0 6px 9px;
+  border-left: 1px dashed rgba(243, 220, 162, 0.2);
 }
 
 .nav-item {
@@ -209,6 +306,34 @@ function switchTab(id: TabId) {
   transform: translateY(-50%) scaleY(1);
 }
 
+.nav-group {
+  min-height: 48px;
+}
+
+.sub-item {
+  grid-template-columns: 28px 1fr auto;
+  padding: 6px 8px;
+  opacity: 0.92;
+}
+
+.sub-item .nav-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.sub-item .nav-name {
+  font-size: calc(12.5px * var(--pm-text-scale));
+  letter-spacing: 0.08em;
+}
+
+.sub-item.quiet {
+  opacity: 0.62;
+}
+
+.sub-item.quiet:not(.active) .nav-icon {
+  background: rgba(255, 255, 255, 0.025);
+}
+
 @media (max-width: 980px) {
   .sidebar {
     flex-direction: row;
@@ -233,6 +358,12 @@ function switchTab(id: TabId) {
     min-width: 0;
     padding: 6px 8px;
   }
+  .sub-nav {
+    display: contents;
+  }
+  .sub-item {
+    border-style: dashed;
+  }
   .nav-icon {
     width: 28px;
     height: 28px;
@@ -247,13 +378,117 @@ function switchTab(id: TabId) {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
+  .sidebar {
+    flex: 0 0 auto;
+    min-height: 96px;
+    max-height: 96px;
+    width: 100%;
+    overflow: hidden;
+    border-top: 1px solid var(--pm-line-soft);
+    box-shadow:
+      inset 0 1px 0 var(--pm-line-faint),
+      0 -10px 18px -14px rgba(0, 0, 0, 0.7);
+  }
+  .nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 44px 34px;
+    gap: 4px;
+    padding: 5px 7px 6px;
+    overflow: hidden;
+  }
   .nav-item {
-    grid-template-columns: 28px;
-    width: 42px;
+    grid-template-columns: 1fr;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    justify-items: center;
     justify-content: center;
+    gap: 3px;
+    padding: 5px 2px;
+    border-radius: 4px;
+  }
+  .nav-item.active {
+    box-shadow:
+      inset 0 0 0 1px var(--pm-line-soft),
+      0 8px 16px -12px rgba(0, 0, 0, 0.65);
+  }
+  .nav-cursor {
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    width: 54%;
+    height: 3px;
+    transform: translateX(-50%) scaleX(0);
+    background: linear-gradient(90deg, transparent, var(--pm-gold-bright), transparent);
+  }
+  .nav-item.active .nav-cursor {
+    transform: translateX(-50%) scaleX(1);
+  }
+  .nav-icon {
+    width: 27px;
+    height: 25px;
   }
   .nav-text {
+    display: block;
+    text-align: center;
+    max-width: 100%;
+  }
+  .nav-name {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    font-size: calc(10px * var(--pm-text-scale));
+    letter-spacing: 0;
+    line-height: 1.1;
+  }
+  .sub-nav {
+    grid-column: 1 / -1;
+    display: flex;
+    min-width: 0;
+    gap: 5px;
+    margin: 0;
+    padding: 1px 0 0;
+    overflow-x: auto;
+    border-left: 0;
+    scrollbar-width: none;
+  }
+  .sub-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sub-nav .nav-item {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 30px;
+    max-width: 104px;
+    grid-template-columns: none;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(243, 220, 162, 0.22);
+    background: rgba(12, 24, 10, 0.36);
+  }
+  .sub-nav .nav-item.active {
+    border-color: rgba(214, 177, 84, 0.62);
+    background: rgba(214, 177, 84, 0.18);
+  }
+  .sub-nav .nav-icon,
+  .sub-nav .nav-sub,
+  .sub-nav .nav-cursor {
+    display: none;
+  }
+  .sub-nav .nav-name {
+    max-width: 88px;
+    font-size: calc(10.5px * var(--pm-text-scale));
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+  .nav-sub {
     display: none;
   }
 }

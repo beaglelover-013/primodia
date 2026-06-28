@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useGameStore, type PromiseMemo } from '../stores/game';
 import PmIcon from '../components/PmIcon.vue';
 import {
@@ -21,18 +21,26 @@ import {
 const game = useGameStore();
 const latestMessage = ref<LatestMaintextPayload>({ maintext: '', options: [], sum: '' });
 const storyIndex = ref<StoryIndexItem[]>([]);
-const customAction = ref('');
 const showOptions = ref(false);
 const isReaderOpen = ref(false);
 const isLoadOpen = ref(false);
 const isFocusMode = ref(false);
+const isPromiseRailOpen = ref(false);
 const pendingLoadMessageId = ref<number | null>(game.loadedStoryCheckpoint?.messageId ?? null);
 const contextMenu = ref<{ x: number; y: number } | null>(null);
+const turnActionOpen = ref(false);
+const turnActionText = ref('');
+const turnActionError = ref('');
 const editingMessage = ref<{
   messageId: number;
   currentText: string;
   fullMessage: string;
   mode: 'maintext' | 'all';
+} | null>(null);
+const editingTurnAction = ref<{
+  userMessageId: number;
+  originalText: string;
+  currentText: string;
 } | null>(null);
 let longPressTimer: number | null = null;
 let messageEventStops: EventOnReturn[] = [];
@@ -139,6 +147,33 @@ function hasMessageId(messageId: number | undefined): messageId is number {
   return messageId !== undefined && messageId !== null;
 }
 
+function readUserMessageText(userMessageId?: number) {
+  if (!hasMessageId(userMessageId)) return '';
+  if (typeof getChatMessages !== 'function') return '';
+  try {
+    const message =
+      getChatMessages(userMessageId, { role: 'user', hide_state: 'all' })?.[0] ??
+      getChatMessages(userMessageId, { role: 'all', hide_state: 'all' })?.[0] ??
+      getChatMessages(userMessageId, { role: 'user' })?.[0] ??
+      getChatMessages(userMessageId)?.[0];
+    return String(message?.message ?? '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function refreshTurnAction() {
+  const userMessageId = latestMessage.value.userMessageId;
+  turnActionText.value = readUserMessageText(userMessageId);
+  turnActionError.value = hasMessageId(userMessageId) && !turnActionText.value ? '未找到本回合行动记录。' : '';
+  if (!turnActionText.value) turnActionOpen.value = false;
+}
+
+async function writeUserMessageText(userMessageId: number, text: string, refresh: 'none' | 'affected' = 'none') {
+  if (typeof setChatMessages !== 'function') throw new Error('当前环境没有提供楼层修改接口。');
+  await setChatMessages([{ message_id: userMessageId, message: text }], { refresh });
+}
+
 function clearLongPressTimer() {
   if (longPressTimer !== null) {
     window.clearTimeout(longPressTimer);
@@ -205,14 +240,13 @@ async function regenerateLatest() {
   if (!hasMessageId(messageId) || !hasMessageId(userMessageId)) {
     game.pushLog('系统', '无法重 roll：缺少楼层信息。');
     closeContextMenu();
-    return;
+    return false;
   }
 
   try {
     game.isGenerating = true;
     closeContextMenu();
-    const userMessages = getChatMessages(userMessageId, { role: 'user' });
-    const userText = userMessages[0]?.message?.trim();
+    const userText = readUserMessageText(userMessageId);
     if (!userText) throw new Error('无法找到上一条玩家消息。');
 
     const canPreserveScene =
@@ -247,10 +281,62 @@ async function regenerateLatest() {
     }
     await game.writeChatSave(result.latest);
     refreshMaintext();
+    return true;
   } catch (error) {
     game.restoreAfterFailedRegeneration(userMessageId);
     refreshMaintext();
     game.pushLog('系统', error instanceof Error ? error.message : '重新生成失败。');
+    return false;
+  } finally {
+    game.isGenerating = false;
+  }
+}
+
+function openEditTurnAction() {
+  const userMessageId = latestMessage.value.userMessageId;
+  if (isViewingLoadedLayer.value) {
+    game.pushLog('系统', '旧楼层只能查看本回合行动，不能直接编辑重发。');
+    return;
+  }
+  if (!hasMessageId(userMessageId)) {
+    game.pushLog('系统', '无法编辑本回合行动：缺少玩家楼层信息。');
+    return;
+  }
+  const text = readUserMessageText(userMessageId);
+  if (!text) {
+    game.pushLog('系统', '无法编辑本回合行动：未找到玩家楼层内容。');
+    return;
+  }
+  editingTurnAction.value = { userMessageId, originalText: text, currentText: text };
+}
+
+async function saveTurnActionAndRegenerate() {
+  if (!editingTurnAction.value) return;
+  const editing = editingTurnAction.value;
+  const nextText = editing.currentText.trim();
+  if (!nextText) {
+    game.pushLog('系统', '本回合行动不能为空。');
+    return;
+  }
+  try {
+    game.isGenerating = true;
+    await writeUserMessageText(editing.userMessageId, nextText, 'none');
+    editingTurnAction.value = null;
+    const regenerated = await regenerateLatest();
+    if (!regenerated) {
+      await writeUserMessageText(editing.userMessageId, editing.originalText, 'none');
+      refreshTurnAction();
+      return;
+    }
+    refreshTurnAction();
+    game.pushLog('系统', '本回合行动已修改，并重新生成正文。');
+  } catch (error) {
+    try {
+      await writeUserMessageText(editing.userMessageId, editing.originalText, 'none');
+    } catch {
+      // 如果回滚失败，保留原错误提示，避免遮蔽真正的生成错误。
+    }
+    game.pushLog('系统', error instanceof Error ? error.message : '修改行动后重新生成失败。');
   } finally {
     game.isGenerating = false;
   }
@@ -340,32 +426,6 @@ async function choose(option: ParsedOption) {
   } catch (error) {
     game.pushLog('系统', error instanceof Error ? error.message : '生成失败。');
     showOptions.value = true;
-  }
-}
-
-async function submitCustomAction() {
-  if (game.isGenerating) return;
-  const text = customAction.value.trim();
-  if (!text) return;
-  game.pushLog('叙事', `已提交自定义行动: ${text}`);
-  customAction.value = '';
-  try {
-    const canContinue = await ensureLoadedBranchForAction();
-    if (!canContinue) return;
-    await game.executePseudoZeroAction(
-      { type: 'CUSTOM_ACTION', text, title: '自定义行动' },
-      {
-        type: 'CUSTOM_ACTION',
-        title: '自定义行动',
-        aiHint:
-          '请承接当前楼层正文，叙述玩家自定义行动后的场景推进。若需要移动，只通过 MVU 地点补丁表达；没有地点补丁就保持原地点。',
-        logText: `CUSTOM_ACTION · ${text.slice(0, 32)}${text.length > 32 ? '…' : ''}`,
-        autoSend: true,
-        preserveLocalState: true,
-      },
-    );
-  } catch (error) {
-    game.pushLog('系统', error instanceof Error ? error.message : '生成失败。');
   }
 }
 
@@ -459,6 +519,12 @@ onUnmounted(() => {
   storyStreamingStop?.();
   storyStreamingStop = undefined;
 });
+
+watch(
+  () => latestMessage.value.userMessageId,
+  () => refreshTurnAction(),
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -502,6 +568,26 @@ onUnmounted(() => {
           <button type="button" :disabled="game.isGenerating" @click="refreshMaintext()">回到最新楼层</button>
         </section>
 
+        <section class="turn-action-card" :class="{ open: turnActionOpen }">
+          <button class="turn-action-head" type="button" @click="turnActionOpen = !turnActionOpen">
+            <span>
+              <PmIcon name="scroll" :size="15" />
+              本回合行动
+            </span>
+            <small>{{ turnActionText ? (turnActionOpen ? '收起' : '展开') : '未记录' }}</small>
+          </button>
+          <div v-if="turnActionOpen" class="turn-action-body">
+            <p v-if="turnActionText">{{ turnActionText }}</p>
+            <p v-else class="turn-action-empty">{{ turnActionError || '未找到本回合行动记录。' }}</p>
+            <div v-if="turnActionText" class="turn-action-tools">
+              <button type="button" @click="copyTextToClipboard(turnActionText)">复制</button>
+              <button type="button" :disabled="game.isGenerating || isViewingLoadedLayer" @click="openEditTurnAction">
+                {{ isViewingLoadedLayer ? '旧楼层不可编辑' : '编辑后重发' }}
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section
           class="story-body"
           :class="{ interactive: hasMessageId(latestMessage.messageId) }"
@@ -540,31 +626,24 @@ onUnmounted(() => {
           </Transition>
         </section>
 
-        <form class="custom-action" @submit.prevent="submitCustomAction">
-          <label for="chronicle-custom-action">自定义行动</label>
-          <div class="custom-row">
-            <input
-              id="chronicle-custom-action"
-              v-model="customAction"
-              type="text"
-              :disabled="game.isGenerating"
-              placeholder="写下你想补充的行动..."
-            />
-            <button type="submit" :disabled="!customAction.trim() || game.isGenerating">
-              <PmIcon name="send" :size="14" />
-              {{ game.isGenerating ? '生成中' : '写入' }}
-            </button>
-          </div>
-        </form>
       </template>
+
+      <section v-else class="story-empty-state">
+        <PmIcon name="scroll" :size="22" />
+        <h2>还没有可显示的正文</h2>
+        <p>当前聊天里没有识别到正式的 <code>&lt;maintext&gt;</code> 开场白或叙事楼层。请使用固定开场白快速开局，或确认第 0 楼确实写入了正文标签。</p>
+      </section>
     </article>
 
-    <aside class="promise-rail">
+    <aside class="promise-rail" :class="{ open: isPromiseRailOpen, due: promiseTaskItems.some(memo => game.isPromiseMemoDue(memo)) }">
       <header class="promise-rail-head">
         <div>
           <p class="kicker">PROMISES</p>
           <h2>约定</h2>
         </div>
+        <button class="promise-mobile-toggle" type="button" @click="isPromiseRailOpen = !isPromiseRailOpen">
+          {{ isPromiseRailOpen ? '收起' : '查看' }}
+        </button>
         <span>{{ promiseTaskItems.length }}</span>
       </header>
 
@@ -609,11 +688,33 @@ onUnmounted(() => {
         <button type="button" :disabled="game.isGenerating" @click="regenerateLatest">
           {{ game.isGenerating ? '处理中...' : '重 roll' }}
         </button>
+        <button type="button" :disabled="game.isGenerating || isViewingLoadedLayer" @click="openEditTurnAction">修改本回合行动</button>
         <button type="button" :disabled="game.isGenerating" @click="openEditMaintext">编辑正文</button>
         <button type="button" :disabled="game.isGenerating" @click="openEditFullMessage">编辑全部文字</button>
       </div>
 
       <div v-if="contextMenu" class="context-backdrop" @click="closeContextMenu"></div>
+
+      <div v-if="editingTurnAction" class="story-modal-mask" @click.self="editingTurnAction = null">
+        <section class="story-modal edit-modal">
+          <header>
+            <div>
+              <p>修改这回合实际写入的玩家行动</p>
+              <h2>编辑本回合行动</h2>
+            </div>
+            <button type="button" @click="editingTurnAction = null"><PmIcon name="x" :size="16" /></button>
+          </header>
+          <div class="edit-body">
+            <textarea v-model="editingTurnAction.currentText"></textarea>
+            <div class="edit-actions">
+              <button class="tool-btn" type="button" :disabled="game.isGenerating" @click="editingTurnAction = null">取消</button>
+              <button class="tool-btn primary" type="button" :disabled="game.isGenerating" @click="saveTurnActionAndRegenerate">
+                {{ game.isGenerating ? '重新生成中...' : '保存并重新生成' }}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <div v-if="editingMessage" class="story-modal-mask" @click.self="editingMessage = null">
         <section class="story-modal edit-modal">
@@ -767,6 +868,9 @@ onUnmounted(() => {
   border-radius: 999px;
   font-weight: 700;
 }
+.promise-mobile-toggle {
+  display: none;
+}
 .promise-empty {
   padding: 16px 12px;
   color: var(--pm-dark-faint);
@@ -862,6 +966,37 @@ onUnmounted(() => {
 }
 .story-sheet.empty {
   min-height: 360px;
+}
+.story-empty-state {
+  position: relative;
+  z-index: 1;
+  min-height: 250px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 36px 26px;
+  color: #7a6141;
+  text-align: center;
+}
+.story-empty-state h2 {
+  margin: 0;
+  color: #5d421d;
+  font-family: var(--pm-font-display);
+  font-size: calc(21px * var(--pm-text-scale));
+  letter-spacing: 0.04em;
+}
+.story-empty-state p {
+  max-width: 520px;
+  margin: 0;
+  font-size: calc(13px * var(--pm-text-scale));
+  line-height: 1.8;
+}
+.story-empty-state code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(132, 94, 42, 0.12);
+  color: #5d421d;
 }
 .story-sheet::before {
   content: '';
@@ -993,6 +1128,79 @@ h1 {
   border-radius: 4px;
   background: rgba(255, 252, 240, 0.54);
 }
+.turn-action-card {
+  position: relative;
+  margin: -2px 0 18px;
+  overflow: hidden;
+  border: 1px solid rgba(154, 117, 61, 0.22);
+  border-radius: 5px;
+  background: linear-gradient(90deg, rgba(240, 212, 138, 0.16), rgba(255, 252, 240, 0.28));
+}
+.turn-action-card.open {
+  border-color: rgba(154, 117, 61, 0.34);
+  background: linear-gradient(90deg, rgba(240, 212, 138, 0.24), rgba(255, 252, 240, 0.42));
+}
+.turn-action-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 11px;
+  color: #6f552e;
+  background: transparent;
+  border: 0;
+  font-family: var(--pm-font-display);
+  font-size: calc(12px * var(--pm-text-scale));
+  letter-spacing: 0.06em;
+}
+.turn-action-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.turn-action-head small {
+  color: #8d6a36;
+  font-size: calc(11px * var(--pm-text-scale));
+}
+.turn-action-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 11px 11px;
+  color: #5d4a35;
+  font-size: calc(12px * var(--pm-text-scale));
+  line-height: 1.65;
+}
+.turn-action-body p {
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.turn-action-empty {
+  color: #8c7150;
+}
+.turn-action-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.turn-action-tools button {
+  padding: 6px 10px;
+  color: #5d421d;
+  border: 1px solid rgba(132, 94, 42, 0.28);
+  border-radius: 4px;
+  background: rgba(255, 252, 240, 0.54);
+  font-size: calc(11px * var(--pm-text-scale));
+}
+.turn-action-tools button:hover:not(:disabled) {
+  border-color: rgba(164, 112, 42, 0.58);
+  background: rgba(255, 249, 223, 0.74);
+}
+.turn-action-tools button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
 .story-body {
   position: relative;
   display: grid;
@@ -1123,65 +1331,6 @@ h1 {
   font-weight: 600;
   line-height: 1.6;
 }
-.custom-action {
-  position: relative;
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid rgba(132, 94, 42, 0.26);
-  border-radius: 4px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(215, 188, 145, 0.22)), rgba(255, 247, 224, 0.28);
-}
-.custom-action label {
-  color: #7a5d31;
-  font-family: var(--pm-font-display);
-  font-size: calc(12px * var(--pm-text-scale));
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-.custom-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-}
-.custom-row input {
-  min-width: 0;
-  padding: 9px 11px;
-  border: 1px solid rgba(132, 94, 42, 0.36);
-  border-radius: 4px;
-  outline: none;
-  color: #3f2f1f;
-  background: rgba(255, 253, 242, 0.76);
-  box-shadow: inset 0 1px 3px rgba(92, 58, 20, 0.1);
-}
-.custom-row input:focus {
-  border-color: rgba(176, 121, 39, 0.78);
-  box-shadow:
-    inset 0 1px 3px rgba(92, 58, 20, 0.1),
-    0 0 0 3px rgba(201, 160, 74, 0.18);
-}
-.custom-row input:disabled {
-  opacity: 0.58;
-  cursor: not-allowed;
-}
-.custom-row button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 13px;
-  border-radius: 4px;
-  color: #3f2b14;
-  background: linear-gradient(180deg, #f0d48a, #b9802c);
-  border: 1px solid rgba(96, 61, 22, 0.48);
-  font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 204, 0.72);
-}
-.custom-row button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .context-backdrop {
   position: fixed;
   inset: 0;
@@ -1420,6 +1569,43 @@ h1 {
   }
   .story-sheet {
     padding: 22px 18px;
+  }
+  .promise-rail {
+    gap: 0;
+    padding: 10px;
+  }
+  .promise-rail.due {
+    border-color: rgba(234, 191, 91, 0.72);
+  }
+  .promise-rail-head {
+    align-items: center;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .promise-rail.open .promise-rail-head {
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--pm-line-faint);
+  }
+  .promise-mobile-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 4px 9px;
+    margin-left: auto;
+    border: 1px solid var(--pm-line-soft);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.16);
+    color: var(--pm-dark-text);
+    font-family: var(--pm-font-display);
+    font-size: calc(11px * var(--pm-text-scale));
+  }
+  .promise-rail:not(.open) .promise-empty,
+  .promise-rail:not(.open) .promise-list {
+    display: none;
+  }
+  .promise-rail:not(.open) .kicker {
+    display: none;
   }
   .story-head {
     flex-direction: column;

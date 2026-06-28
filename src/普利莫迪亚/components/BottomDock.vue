@@ -4,6 +4,11 @@ import PmIcon from './PmIcon.vue';
 
 const game = useGameStore();
 const logsRef = ref<HTMLElement | null>(null);
+const logsOpen = ref(false);
+const mobileDetailsOpen = ref(false);
+
+const visibleLogs = computed(() => game.engineLogs.slice(0, 12));
+const hasAttentionLog = computed(() => visibleLogs.value.some(log => log.tone === 'red' || log.tone === 'amber' || log.kind === '提示'));
 
 function clearDraft() {
   game.clearDraftActions();
@@ -68,15 +73,16 @@ function logTitle(log: EngineLog) {
 </script>
 
 <template>
-  <footer class="dock">
+  <footer class="dock" :class="{ 'logs-open': logsOpen, 'mobile-details-open': mobileDetailsOpen }">
     <!-- 左侧引擎日志 -->
-    <section class="dock-logs">
-      <div class="dock-head">
+    <section class="dock-logs" :class="{ collapsed: !logsOpen }">
+      <button class="log-toggle" :class="{ attention: hasAttentionLog }" type="button" @click="logsOpen = !logsOpen">
         <PmIcon name="scroll" :size="14" />
-        <span>引擎记录</span>
-      </div>
-      <div ref="logsRef" class="logs">
-        <div v-for="log in game.engineLogs.slice(0, 12)" :key="log.id" class="log-line">
+        <span>{{ logsOpen ? '收起日志' : '日志' }}</span>
+        <i>{{ game.engineLogs.length }}</i>
+      </button>
+      <div v-if="logsOpen" ref="logsRef" class="logs">
+        <div v-for="log in visibleLogs" :key="log.id" class="log-line">
           <span class="log-time">{{ log.at }}</span>
           <span class="pm-tag" :class="logKindClass(log.kind)">{{ log.kind }}</span>
           <span class="pm-tag source" :class="logSourceClass(log)" :title="logTitle(log)">{{ logSourceLabel(log) }}</span>
@@ -91,6 +97,9 @@ function logTitle(log: EngineLog) {
       <div class="dock-head">
         <PmIcon name="flourish" :size="14" />
         <span>你决定做些什么</span>
+        <button class="mobile-panel-toggle" :class="{ attention: hasAttentionLog }" type="button" @click="mobileDetailsOpen = !mobileDetailsOpen">
+          {{ mobileDetailsOpen ? '收起' : '详情' }}
+        </button>
         <button v-if="game.draftActions.length || game.playerInput" id="dock-clear-draft" class="pm-link" @click="clearDraft">清空</button>
       </div>
       <div id="dock-draft" class="draft-list" :class="{ empty: game.draftActions.length === 0 }">
@@ -136,7 +145,7 @@ function logTitle(log: EngineLog) {
 .dock {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 0.85fr) 1.4fr;
+  grid-template-columns: 86px 1fr;
   gap: 0;
   max-height: 260px;
   min-height: 205px;
@@ -145,6 +154,9 @@ function logTitle(log: EngineLog) {
   border-top: 1px solid var(--pm-edge-soft);
   box-shadow: 0 -10px 22px -10px rgba(0, 0, 0, 0.55);
   color: var(--pm-parch);
+}
+.dock.logs-open {
+  grid-template-columns: minmax(260px, 0.85fr) 1.4fr;
 }
 .dock::before {
   content: '';
@@ -166,6 +178,48 @@ function logTitle(log: EngineLog) {
   border-right: 1px dashed var(--pm-line-soft);
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.dock-logs.collapsed {
+  padding: 10px 8px 12px;
+  align-items: center;
+  justify-content: center;
+}
+.log-toggle {
+  min-height: 36px;
+  border: 1px solid var(--pm-line-soft);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--pm-parch-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: var(--pm-font-display);
+  font-size: calc(11px * var(--pm-text-scale));
+  letter-spacing: 0.08em;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+.log-toggle:hover,
+.log-toggle.attention {
+  border-color: var(--pm-line-bright);
+  background: rgba(201, 160, 74, 0.16);
+  color: var(--pm-gold-bright);
+}
+.log-toggle i {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.22);
+  font-family: var(--pm-font-num);
+  font-size: calc(10px * var(--pm-text-scale));
+  font-style: normal;
 }
 
 .dock-head {
@@ -182,6 +236,9 @@ function logTitle(log: EngineLog) {
 .dock-head .pm-link {
   margin-left: auto;
   color: var(--pm-gold-bright);
+}
+.mobile-panel-toggle {
+  display: none;
 }
 
 .logs {
@@ -339,11 +396,82 @@ function logTitle(log: EngineLog) {
 @media (max-width: 720px) {
   .dock {
     grid-template-columns: 1fr;
-    max-height: 330px;
+    min-height: 0;
+    max-height: 48vh;
+  }
+  .dock.logs-open {
+    grid-template-columns: 1fr;
   }
   .dock-logs {
     border-right: none;
     border-bottom: 1px dashed rgba(243, 220, 162, 0.2);
+  }
+  .dock-logs.collapsed {
+    display: none;
+  }
+  .dock.mobile-details-open .dock-logs.collapsed {
+    display: flex;
+    align-items: flex-start;
+    padding: 7px 10px 0;
+  }
+  .dock-input {
+    padding: 8px 10px 10px;
+    gap: 6px;
+  }
+  .dock-head {
+    width: 100%;
+    margin-bottom: 0;
+    letter-spacing: 0.08em;
+    font-size: calc(10.5px * var(--pm-text-scale));
+  }
+  .mobile-panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    margin-left: auto;
+    padding: 3px 8px;
+    border: 1px solid var(--pm-line-soft);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.16);
+    color: var(--pm-parch-soft);
+    font-family: var(--pm-font-display);
+    font-size: calc(10px * var(--pm-text-scale));
+  }
+  .mobile-panel-toggle.attention {
+    color: var(--pm-gold-bright);
+    border-color: var(--pm-line-bright);
+    background: rgba(201, 160, 74, 0.14);
+  }
+  .dock-head .pm-link {
+    margin-left: 0;
+  }
+  .dock:not(.mobile-details-open) .draft-list,
+  .dock:not(.mobile-details-open) #dock-preflight,
+  .dock:not(.mobile-details-open) .dock-tips {
+    display: none;
+  }
+  .dock.mobile-details-open .draft-list {
+    max-height: 92px;
+  }
+  .dock-row {
+    grid-template-columns: 1fr auto;
+    gap: 7px;
+  }
+  .dock-input-wrap .narrate {
+    min-height: 42px;
+    max-height: 42px;
+    padding: 9px 10px;
+    resize: none;
+  }
+  .dock-actions {
+    min-width: 84px;
+    gap: 6px;
+  }
+  .dock-actions .pm-btn.big {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: calc(12px * var(--pm-text-scale));
   }
   .log-line {
     grid-template-columns: 92px 56px 48px 1fr;

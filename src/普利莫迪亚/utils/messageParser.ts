@@ -99,6 +99,54 @@ function isUsableStoryText(content: string): boolean {
   return stripFrontendPlaceholders(content).replace(/\s+/g, '').length > 0;
 }
 
+function hasExplicitStoryMarkup(content: string): boolean {
+  return /<maintext\b[^>]*>[\s\S]*?<\/maintext>|<NARRATIVE\b[^>]*>[\s\S]*?<\/NARRATIVE>/i.test(content);
+}
+
+function uniqueMessagesById(messages: any[]): any[] {
+  const seen = new Map<number, any>();
+  for (const message of messages) {
+    if (!message || typeof message.message_id !== 'number') continue;
+    if (!seen.has(message.message_id)) seen.set(message.message_id, message);
+  }
+  return [...seen.values()].sort((a, b) => a.message_id - b.message_id);
+}
+
+function isAssistantStoryCandidate(message: any): boolean {
+  const text = String(message?.message ?? '');
+  if (hasExplicitStoryMarkup(text)) return true;
+  if (message?.message_id <= 0) return false;
+  if (message?.role === 'assistant') return true;
+  return message?.is_user === false && message?.is_system !== true;
+}
+
+function readAssistantStoryCandidates(lastMessageId: number): any[] {
+  if (typeof getChatMessages !== 'function') return [];
+  const range = `0-${lastMessageId}`;
+  const attempts: any[][] = [];
+  try {
+    attempts.push(getChatMessages(range, { role: 'assistant', hide_state: 'all' }) ?? []);
+  } catch {
+    // Some Tavern builds do not support hide_state on range reads.
+  }
+  try {
+    attempts.push(getChatMessages(range, { role: 'assistant' }) ?? []);
+  } catch {
+    // Keep the fallback chain alive.
+  }
+  try {
+    attempts.push(getChatMessages(range, { role: 'all', hide_state: 'all' }) ?? []);
+  } catch {
+    // Some Tavern builds do not support hide_state on range reads.
+  }
+  try {
+    attempts.push(getChatMessages(range, { role: 'all' }) ?? []);
+  } catch {
+    // Final fallback failed; the caller will return an empty index.
+  }
+  return uniqueMessagesById(attempts.flat()).filter(isAssistantStoryCandidate);
+}
+
 function stripThinkingBlocks(content: string): string {
   if (!content) return '';
 
@@ -685,8 +733,8 @@ export function loadAssistantStoryIndex(): StoryIndexItem[] {
     const lastMessageId = getLastMessageId();
     if (lastMessageId < 0) return [];
 
-    return getChatMessages(`0-${lastMessageId}`, { role: 'assistant' })
-      .filter(message => message.message_id > 0)
+    return readAssistantStoryCandidates(lastMessageId)
+      .filter(message => message.message_id > 0 || hasExplicitStoryMarkup(message.message))
       .map(message => {
         const parsed = parseStoryMessage(message.message, message.message_id);
         return {

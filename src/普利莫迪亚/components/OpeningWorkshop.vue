@@ -79,6 +79,7 @@ const activeRaceGroup = ref('');
 const genderCustomActive = ref(false);
 const standardGenderOptions = ['男', '女'] as const;
 const generatedDraftKey = ref('');
+const showOpeningAdvanced = ref(false);
 
 const canConfirm = computed(() =>
   Boolean(
@@ -217,6 +218,7 @@ function resetOpeningWorkshop() {
   tavernTemplateText.value = '';
   templateState.value = '未生成';
   missingRegionEntries.value = [];
+  showOpeningAdvanced.value = false;
   activeTerritoryPeople.value = findOpeningTerritory(defaultTerritory)?.people || '';
   activeRaceGroup.value = selectedRace.value?.group || '';
   genderCustomActive.value = false;
@@ -442,8 +444,20 @@ async function generateOpeningStoryStep() {
   notice.value = '开场白和初始变量已生成，可以开始游戏。';
 }
 
-async function generateProfilesAndStoryFromCurrentTemplates(existingDraft?: OpeningWorkshopDraft) {
+async function generateProfilesAndStoryFromCurrentTemplates() {
+  if (cannotGenerateReason.value) {
+    error.value = cannotGenerateReason.value;
+    return;
+  }
   await generateCharacterProfileStep();
+  if (characterProfileState.value !== '已写入' || !characterProfile.value) return;
+  await generateTavernProfileStep();
+  if (tavernProfileState.value !== '已写入' || !tavernProfile.value) return;
+  await generateOpeningStoryStep();
+  if (story.value?.initvar) {
+    currentStep.value = 3;
+    showOpeningAdvanced.value = true;
+  }
 }
 
 async function saveEditedOpeningTemplates() {
@@ -651,6 +665,31 @@ watch(
           <div v-if="notice" class="opening-alert good">{{ notice }}</div>
           <div v-if="loading" class="opening-alert">{{ loading }}...</div>
 
+          <section v-if="currentStep === 0" class="quick-start-panel">
+            <div class="quick-copy">
+              <p>推荐开局</p>
+              <h2>从固定开场白直接开始</h2>
+              <span>直接创建第 1 层，写入初始变量，并完成世界书绑定。适合第一次游玩或想快速进入故事的人。</span>
+            </div>
+            <div class="quick-controls">
+              <label>
+                <span>写入世界书</span>
+                <select v-model="world.worldbookName" class="opening-input">
+                  <option value="">请选择</option>
+                  <option v-for="name in worldbooks" :key="name" :value="name">{{ name }}</option>
+                </select>
+              </label>
+              <button class="opening-btn hero" type="button" :disabled="!!loading || !world.worldbookName" @click="confirmFixedOpening">
+                使用固定开场白快速开局
+              </button>
+              <button class="opening-btn ghost wide" type="button" :disabled="!!loading || !!cannotGenerateReason" @click="generateProfilesAndStoryFromCurrentTemplates">
+                自定义资料开局
+              </button>
+              <small v-if="!world.worldbookName">请先选择世界书。</small>
+              <small v-else>想自己填写人物和酒馆设定时，再用自定义资料开局。</small>
+            </div>
+          </section>
+
           <section v-if="currentStep === 0" class="step-panel">
             <div class="section-head">
               <span><PmIcon name="heart" :size="18" /> 人物登记</span>
@@ -848,7 +887,18 @@ watch(
               <span><PmIcon name="sparkles" :size="18" /> 开场预览</span>
               <small>PREVIEW</small>
             </div>
-            <div class="template-actions opening-sequence-actions">
+            <div class="opening-auto-card">
+              <div>
+                <strong>自定义资料开局</strong>
+                <span>需要自定义设定时，前端会自动完成档案与开场白生成。</span>
+              </div>
+              <button class="opening-btn primary" type="button" :disabled="!!loading || !!cannotGenerateReason" @click="generateProfilesAndStoryFromCurrentTemplates">
+                生成自定义开局
+              </button>
+            </div>
+            <details class="advanced-opening" :open="showOpeningAdvanced">
+              <summary>高级开局细节：模板、档案与 initvar</summary>
+              <div class="template-actions opening-sequence-actions">
               <button class="opening-btn primary" type="button" :disabled="!!loading || !!cannotGenerateReason" @click="generateCharacterProfileStep">
                 1. 生成人物档案并写入
               </button>
@@ -915,10 +965,10 @@ watch(
               <div v-else class="empty-box">尚未生成 initvar，不能开始游戏。</div>
             </label>
             <div class="fixed-option">固定选项：1.开始我们的故事</div>
+            </details>
           </section>
 
           <footer class="opening-actions">
-            <button class="opening-btn ghost" type="button" :disabled="!!loading || !world.worldbookName" @click="confirmFixedOpening">使用固定开场白快速开局</button>
             <button class="opening-btn ghost" type="button" :disabled="currentStep === 0 || !!loading" @click="prevStep">上一步</button>
             <button v-if="currentStep < 3" class="opening-btn primary" type="button" :disabled="!!loading" @click="nextStep">下一步</button>
             <button v-else class="opening-btn primary" type="button" :disabled="!!loading || !canConfirm" @click="confirmOpening">开始游戏</button>
@@ -1173,6 +1223,95 @@ label {
 .opening-alert.good {
   border-color: rgba(104, 180, 118, 0.7);
   background: rgba(35, 99, 52, 0.18);
+}
+
+.quick-start-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid rgba(226, 183, 91, 0.5);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(235, 194, 99, 0.18), transparent 36%),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 242, 201, 0.08);
+}
+
+.quick-copy {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.quick-copy p,
+.quick-copy h2,
+.quick-copy span,
+.quick-controls small {
+  margin: 0;
+}
+
+.quick-copy p {
+  color: #f0ce75;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+}
+
+.quick-copy h2 {
+  color: #fff8e9;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.quick-copy span,
+.quick-controls small {
+  color: rgba(244, 233, 208, 0.66);
+  line-height: 1.65;
+}
+
+.quick-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.opening-auto-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(213, 166, 82, 0.24);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.opening-auto-card div {
+  display: grid;
+  gap: 5px;
+}
+
+.opening-auto-card strong {
+  color: #ffe5a1;
+}
+
+.opening-auto-card span {
+  color: rgba(244, 233, 208, 0.62);
+  line-height: 1.55;
+}
+
+.advanced-opening {
+  display: grid;
+  gap: 14px;
+}
+
+.advanced-opening > summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: #f7e8bf;
+  border: 1px dashed rgba(213, 166, 82, 0.34);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .module-list,
@@ -1458,6 +1597,23 @@ label {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.opening-btn.hero {
+  min-height: 58px;
+  color: #1d1308;
+  font-size: 17px;
+  font-weight: 800;
+  background:
+    linear-gradient(180deg, #ffe9a7, #d79a35 64%, #9f6722);
+  border-color: rgba(255, 228, 147, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 213, 0.78),
+    0 16px 32px -20px rgba(0, 0, 0, 0.78);
+}
+
+.opening-btn.wide {
+  width: 100%;
+}
+
 .opening-btn.sm {
   min-height: 34px;
   padding: 0 12px;
@@ -1482,8 +1638,14 @@ label {
 
   .field-row.two,
   .module-row,
-  .territory-layout {
+  .territory-layout,
+  .quick-start-panel {
     grid-template-columns: 1fr;
+  }
+
+  .opening-auto-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .choice-tabs.vertical {

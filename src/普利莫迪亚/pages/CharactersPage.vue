@@ -88,6 +88,11 @@ async function sendGift(item: '橙皮陈酿' | '泥金蜂蜜小罐' | '银烛台
   giftOpen.value = false;
 }
 
+async function deleteCharacter(h: Heroine) {
+  if (!window.confirm(`确定删除配角「${h.name}」吗？这会从当前变量和人物羁绊列表里移除。`)) return;
+  await game.deleteHeroine(h.id);
+}
+
 const memoryOpen = ref(false);
 const memoryTarget = ref<Heroine | null>(null);
 function openMemory(h: Heroine) {
@@ -381,11 +386,6 @@ async function createWorldbookEntryForSelected() {
               <span class="pm-bar energy"><i :style="{ width: `${(h.energy / h.energyMax) * 100}%` }"></i></span>
               <span class="pm-num">{{ h.energy }}/{{ h.energyMax }}</span>
             </div>
-            <div class="state-capsules">
-              <span class="state-chip"><b>生命</b>{{ hpPhase(h) }}</span>
-              <span class="state-chip"><b>精力</b>{{ energyPhase(h) }}</span>
-              <span class="state-chip bladder"><b>膀胱</b>{{ bladderPhase(h) }}</span>
-            </div>
             <div class="bar-line">
               <span class="bar-label">膀胱</span>
               <span class="pm-bar bladder"><i :style="{ width: `${(h.bladder / h.bladderMax) * 100}%` }"></i></span>
@@ -411,6 +411,9 @@ async function createWorldbookEntryForSelected() {
             </button>
             <button class="pm-btn sm dark" @click.stop="openGift(h)">
               <PmIcon name="gift" :size="12" /> 赠送 / 投喂
+            </button>
+            <button class="pm-btn sm danger" @click.stop="deleteCharacter(h)">
+              <PmIcon name="x" :size="12" /> 删除
             </button>
           </footer>
         </article>
@@ -885,6 +888,15 @@ async function createWorldbookEntryForSelected() {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+.char-acts .pm-btn.danger {
+  border-color: rgba(133, 56, 42, 0.45);
+  color: #6d2f24;
+  background: rgba(132, 51, 34, 0.08);
+}
+.char-acts .pm-btn.danger:hover:not(:disabled) {
+  border-color: rgba(160, 60, 42, 0.68);
+  background: rgba(132, 51, 34, 0.15);
 }
 
 /* 侧栏 */

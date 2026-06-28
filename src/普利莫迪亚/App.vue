@@ -393,4 +393,10 @@ const tabTitle = computed(
 .sep {
   color: var(--pm-line-soft);
 }
+
+@media (max-width: 760px) {
+  .crumbs {
+    display: none;
+  }
+}
 </style>

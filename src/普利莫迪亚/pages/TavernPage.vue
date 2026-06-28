@@ -975,10 +975,55 @@ function assignWorkerToRegion(r: TavernRegion) {
   }
 }
 @media (max-width: 720px) {
+  #page-tavern :deep(.pm-paper-head) {
+    display: grid;
+    gap: 10px;
+    padding: 12px 12px 10px;
+  }
+  #page-tavern :deep(.pm-paper-head > div:first-child) {
+    min-width: 0;
+  }
+  .head-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    gap: 7px;
+  }
+  .business-strip {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto auto 48px minmax(0, 1fr);
+    gap: 6px;
+    width: 100%;
+    min-height: 32px;
+    padding: 5px 7px;
+    overflow: hidden;
+  }
+  .business-strip,
+  .visitor-chance {
+    font-size: calc(10.5px * var(--pm-text-scale));
+  }
+  .guest-cap,
+  .visitor-chance input {
+    width: 42px;
+    height: 22px;
+    padding: 0 4px;
+  }
+  .head-actions > .pm-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+  .tavern-board {
+    gap: 10px;
+  }
   .floor-plan {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: none;
     min-height: 0;
+    gap: 5px;
+    padding: 9px;
   }
   .floor-room.rooms,
   .floor-room.front,
@@ -990,7 +1035,51 @@ function assignWorkerToRegion(r: TavernRegion) {
   .floor-room.stable {
     grid-column: auto;
     grid-row: auto;
-    min-height: 74px;
+    min-height: 60px;
+    padding: 6px 4px;
+  }
+  .floor-room strong {
+    font-size: calc(13px * var(--pm-text-scale));
+    letter-spacing: 0.03em;
+  }
+  .floor-room span,
+  .floor-room em {
+    font-size: calc(10px * var(--pm-text-scale));
+  }
+  .region-detail {
+    padding: 9px;
+    gap: 7px;
+  }
+  .rg-head {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 7px;
+  }
+  .rg-emblem {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+  .rg-title h3 {
+    font-size: calc(13.5px * var(--pm-text-scale));
+  }
+  .rg-desc {
+    font-size: calc(11.5px * var(--pm-text-scale));
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .presence-group {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .staff-grid {
+    grid-template-columns: 1fr;
+  }
+  .room-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

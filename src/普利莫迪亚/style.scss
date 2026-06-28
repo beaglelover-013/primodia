@@ -1318,6 +1318,39 @@ label.pm-field > span {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+@media (max-width: 760px) {
+  .pm-shell {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .pm-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .pm-content {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    padding: 9px 8px 10px;
+    overflow: auto;
+    scrollbar-gutter: auto;
+    border-left: 0;
+  }
+  .sidebar {
+    order: 2;
+  }
+  .pm-content > .page {
+    max-height: none;
+  }
+  .pm-content > .page > .pm-paper-body {
+    overflow: auto;
+  }
+  .pm-grid.auto {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
 @media (max-width: 600px) {
   :root {
     --pm-frame-min-height: 0px;

@@ -413,25 +413,64 @@ const activeTemporaryStates = computed(() => game.flattenTemporaryStates().slice
 @media (max-width: 760px) {
   .hud {
     grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 7px 9px;
+  }
+  .hud::before,
+  .hud::after {
+    left: 9px;
+    right: 9px;
+  }
+  .hud-left {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    min-width: 0;
+  }
+  .hud-brand {
+    min-width: 0;
+    flex: 0 1 auto;
   }
   .hud-right {
     justify-content: flex-start;
     overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .hud-right::-webkit-scrollbar,
+  .hud-center::-webkit-scrollbar {
+    display: none;
+  }
+  .hud-center {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 0;
   }
   .brand-emblem {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
   }
   .brand-title {
-    font-size: calc(15px * var(--pm-text-scale));
-    letter-spacing: 0.12em;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(13px * var(--pm-text-scale));
+    letter-spacing: 0.06em;
   }
   .brand-sub {
     display: none;
   }
   .hud-date {
+    min-width: 0;
     padding-left: 0;
-    font-size: calc(11.5px * var(--pm-text-scale));
+    overflow: hidden;
+    font-size: calc(10.5px * var(--pm-text-scale));
+    white-space: normal;
+    line-height: 1.35;
+    text-overflow: ellipsis;
   }
   .hud-date small {
     font-size: calc(10px * var(--pm-text-scale));
@@ -441,7 +480,16 @@ const activeTemporaryStates = computed(() => game.flattenTemporaryStates().slice
     font-size: calc(11px * var(--pm-text-scale));
     white-space: nowrap;
   }
+  .state-strip {
+    max-width: none;
+  }
+  .fund-chip {
+    min-height: 22px;
+    padding: 2px 7px;
+    font-size: calc(10px * var(--pm-text-scale));
+  }
   .coin {
+    display: none;
     padding: 2px 7px 2px 5px;
   }
 }

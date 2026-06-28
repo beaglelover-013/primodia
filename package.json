@@ -2,7 +2,10 @@
   "scripts": {
     "build:dev": "webpack --mode development",
     "build": "webpack --mode production",
+<<<<<<< HEAD
     "check:mojibake": "node scripts/check-mojibake.mjs",
+=======
+>>>>>>> c5efcd76bf56ff7466cc36a0a02eea9e070a25de
     "watch": "webpack --mode development --watch --progress",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\" --no-error-on-unmatched-pattern",
     "lint": "eslint",
@@ -116,11 +119,14 @@
       "javascript-obfuscator",
       "unrs-resolver",
       "vue-demi"
+<<<<<<< HEAD
     ],
     "approvedBuilds": [
       "@parcel/watcher@2.5.6",
       "unrs-resolver@1.11.1",
       "vue-demi@0.14.10"
+=======
+>>>>>>> c5efcd76bf56ff7466cc36a0a02eea9e070a25de
     ]
   }
 }

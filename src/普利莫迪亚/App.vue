@@ -29,7 +29,7 @@ let hostFrameObserver: ResizeObserver | null = null;
 let hostFrameRaf = 0;
 let deactivateSameFloorMode: (() => void) | undefined;
 let authoritativeRefreshTimers: number[] = [];
-let mvuEventStops: EventOnReturn[] = [];
+const mvuEventStops: EventOnReturn[] = [];
 let mvuEventsRegistered = false;
 
 function stopEventListeners(stops: EventOnReturn[]) {
@@ -294,7 +294,7 @@ const tabTitle = computed(
 </script>
 
 <template>
-  <div class="pm-app" id="pm-app">
+  <div id="pm-app" class="pm-app">
     <!-- 角花装饰 -->
     <svg class="pm-corner tl" viewBox="0 0 64 64">
       <path

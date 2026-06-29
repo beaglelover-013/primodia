@@ -203,7 +203,7 @@ function assignWorkerToRegion(r: TavernRegion) {
 </script>
 
 <template>
-  <section class="page pm-paper" id="page-tavern">
+  <section id="page-tavern" class="page pm-paper">
     <header class="pm-paper-head">
       <div>
         <h2 class="h-title">
@@ -1016,14 +1016,25 @@ function assignWorkerToRegion(r: TavernRegion) {
     padding-inline: 8px;
   }
   .tavern-board {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
   }
   .floor-plan {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    grid-template-columns: none;
     grid-template-rows: none;
     min-height: 0;
-    gap: 5px;
-    padding: 9px;
+    gap: 6px;
+    padding: 7px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-width: 1px;
+    background:
+      linear-gradient(180deg, rgba(255, 245, 215, 0.72), rgba(212, 186, 136, 0.44));
+  }
+  .floor-plan::-webkit-scrollbar {
+    display: none;
   }
   .floor-room.rooms,
   .floor-room.front,
@@ -1035,16 +1046,26 @@ function assignWorkerToRegion(r: TavernRegion) {
   .floor-room.stable {
     grid-column: auto;
     grid-row: auto;
-    min-height: 60px;
-    padding: 6px 4px;
+    flex: 0 0 74px;
+    min-height: 44px;
+    padding: 6px 7px;
+    border-width: 1px;
   }
   .floor-room strong {
-    font-size: calc(13px * var(--pm-text-scale));
-    letter-spacing: 0.03em;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(12px * var(--pm-text-scale));
+    letter-spacing: 0;
   }
   .floor-room span,
   .floor-room em {
     font-size: calc(10px * var(--pm-text-scale));
+  }
+  .floor-room em,
+  .floor-room.worn::after {
+    display: none;
   }
   .region-detail {
     padding: 9px;
@@ -1065,10 +1086,7 @@ function assignWorkerToRegion(r: TavernRegion) {
   .rg-desc {
     font-size: calc(11.5px * var(--pm-text-scale));
     line-height: 1.55;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin: 0;
   }
   .presence-group {
     grid-template-columns: 1fr;

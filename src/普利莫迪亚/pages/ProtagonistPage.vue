@@ -24,7 +24,7 @@ function trainCooking() {
 </script>
 
 <template>
-  <section class="page pm-paper" id="page-protagonist">
+  <section id="page-protagonist" class="page pm-paper">
     <header class="pm-paper-head">
       <div>
         <h2 class="h-title">

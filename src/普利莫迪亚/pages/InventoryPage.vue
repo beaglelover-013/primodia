@@ -598,7 +598,7 @@ function qualityTone(q?: InventoryItem['quality']) {
               <label v-if="!isSatchelView" class="category-mover" title="整理到其他分类" @click.stop>
                 <span>整理</span>
                 <select :value="it.category" @change="moveItemCategoryFromEvent(it, $event)">
-                  <option v-for="cat in categories.filter(c => c !== '全部')" :key="cat" :value="cat">{{ cat }}</option>
+                  <option v-for="categoryName in categories.filter(c => c !== '全部')" :key="categoryName" :value="categoryName">{{ categoryName }}</option>
                 </select>
               </label>
               <div class="item-actions">

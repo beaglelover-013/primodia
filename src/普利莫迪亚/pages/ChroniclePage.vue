@@ -59,7 +59,7 @@ const chapterMark = computed(() =>
   latestMessage.value.messageId === undefined ? '' : `楼层 #${latestMessage.value.messageId}`,
 );
 const isViewingLoadedLayer = computed(() => pendingLoadMessageId.value !== null);
-const readerItems = computed(() => storyIndex.value);
+const readerItems = computed(() => [...storyIndex.value].reverse());
 const loadItems = computed(() => [...storyIndex.value].reverse());
 const promiseTaskItems = computed(() =>
   game.promiseMemos
@@ -182,6 +182,7 @@ function clearLongPressTimer() {
 }
 
 function startLongPress(event: MouseEvent | TouchEvent) {
+  if ('touches' in event) return;
   if (contextMenu.value || game.isGenerating || !hasMaintext.value || !hasMessageId(latestMessage.value.messageId))
     return;
   clearLongPressTimer();
@@ -1570,6 +1571,20 @@ h1 {
   .story-sheet {
     padding: 22px 18px;
   }
+  .page-tools {
+    justify-content: stretch;
+    gap: 6px;
+  }
+  .page-tools .tool-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 7px;
+  }
+  .story-body.interactive {
+    cursor: default;
+    user-select: text;
+  }
   .promise-rail {
     gap: 0;
     padding: 10px;
@@ -1612,6 +1627,30 @@ h1 {
   }
   .custom-row {
     grid-template-columns: 1fr;
+  }
+  .story-modal-mask {
+    align-items: stretch;
+    padding: 8px;
+  }
+  .story-modal {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+  }
+  .reader-modal {
+    height: calc(100dvh - 16px);
+  }
+  .story-modal > header {
+    padding: 11px 12px;
+  }
+  .reader-list {
+    padding: 10px;
+  }
+  .reader-item {
+    padding: 12px;
+  }
+  .reader-item p {
+    font-size: calc(15px * var(--pm-text-scale));
+    line-height: 1.85;
   }
 }
 </style>

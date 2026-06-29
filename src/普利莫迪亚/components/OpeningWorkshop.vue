@@ -456,7 +456,7 @@ async function generateProfilesAndStoryFromCurrentTemplates() {
   await generateOpeningStoryStep();
   if (story.value?.initvar) {
     currentStep.value = 3;
-    showOpeningAdvanced.value = true;
+    showOpeningAdvanced.value = false;
   }
 }
 
@@ -667,8 +667,8 @@ watch(
 
           <section v-if="currentStep === 0" class="quick-start-panel">
             <div class="quick-copy">
-              <p>推荐开局</p>
-              <h2>从固定开场白直接开始</h2>
+              <p>默认开局</p>
+              <h2>固定开场白快速开局</h2>
               <span>直接创建第 1 层，写入初始变量，并完成世界书绑定。适合第一次游玩或想快速进入故事的人。</span>
             </div>
             <div class="quick-controls">
@@ -682,7 +682,7 @@ watch(
               <button class="opening-btn hero" type="button" :disabled="!!loading || !world.worldbookName" @click="confirmFixedOpening">
                 使用固定开场白快速开局
               </button>
-              <button class="opening-btn ghost wide" type="button" :disabled="!!loading || !!cannotGenerateReason" @click="generateProfilesAndStoryFromCurrentTemplates">
+              <button class="opening-btn ghost wide custom-opening-btn" type="button" :disabled="!!loading || !!cannotGenerateReason" @click="generateProfilesAndStoryFromCurrentTemplates">
                 自定义资料开局
               </button>
               <small v-if="!world.worldbookName">请先选择世界书。</small>
@@ -1230,13 +1230,16 @@ label {
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
   gap: 18px;
   margin-bottom: 18px;
-  padding: 18px;
-  border: 1px solid rgba(226, 183, 91, 0.5);
-  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid rgba(226, 183, 91, 0.68);
+  border-radius: 16px;
   background:
-    radial-gradient(circle at 12% 12%, rgba(235, 194, 99, 0.18), transparent 36%),
+    radial-gradient(circle at 12% 12%, rgba(235, 194, 99, 0.24), transparent 40%),
+    linear-gradient(135deg, rgba(120, 82, 28, 0.32), rgba(255, 255, 255, 0.035)),
     rgba(255, 255, 255, 0.035);
-  box-shadow: inset 0 1px 0 rgba(255, 242, 201, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 242, 201, 0.12),
+    0 18px 38px -30px rgba(0, 0, 0, 0.72);
 }
 
 .quick-copy {
@@ -1260,7 +1263,7 @@ label {
 
 .quick-copy h2 {
   color: #fff8e9;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 500;
 }
 
@@ -1273,6 +1276,16 @@ label {
 .quick-controls {
   display: grid;
   gap: 10px;
+}
+
+.quick-controls .opening-btn.hero {
+  min-height: 56px;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.custom-opening-btn {
+  opacity: 0.86;
 }
 
 .opening-auto-card {

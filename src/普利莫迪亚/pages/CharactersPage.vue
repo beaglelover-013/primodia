@@ -333,7 +333,7 @@ async function createWorldbookEntryForSelected() {
 </script>
 
 <template>
-  <section class="page pm-paper" id="page-characters">
+  <section id="page-characters" class="page pm-paper">
     <header class="pm-paper-head">
       <div>
         <h2 class="h-title">
@@ -751,7 +751,7 @@ async function createWorldbookEntryForSelected() {
 <style scoped>
 .char-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
   gap: 14px;
   align-items: start;
 }
@@ -763,11 +763,11 @@ async function createWorldbookEntryForSelected() {
 .char-card {
   position: relative;
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(110, 80, 34, 0.45);
-  background: linear-gradient(180deg, rgba(255, 245, 215, 0.7), rgba(212, 186, 136, 0.5));
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 80, 34, 0.34);
+  background: linear-gradient(180deg, rgba(255, 248, 226, 0.72), rgba(220, 196, 145, 0.42));
   box-shadow: inset 0 1px 0 rgba(255, 245, 215, 0.5);
   transition: 0.2s ease;
   cursor: pointer;
@@ -786,13 +786,14 @@ async function createWorldbookEntryForSelected() {
 
 .char-head {
   display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 12px;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: center;
 }
 .portrait {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.4);
   color: var(--pm-parch-bright);
   display: grid;
@@ -804,8 +805,8 @@ async function createWorldbookEntryForSelected() {
 .char-meta h3 {
   margin: 0;
   font-family: var(--pm-font-display);
-  font-size: calc(16px * var(--pm-text-scale));
-  letter-spacing: 0.05em;
+  font-size: calc(17px * var(--pm-text-scale));
+  letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -814,6 +815,7 @@ async function createWorldbookEntryForSelected() {
 .char-role {
   font-size: calc(12px * var(--pm-text-scale));
   color: var(--pm-ink-dim);
+  margin-top: 2px;
 }
 .char-loc {
   display: inline-flex;
@@ -825,11 +827,13 @@ async function createWorldbookEntryForSelected() {
 
 .bars {
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  padding: 8px 0;
+  border-block: 1px dashed rgba(110, 80, 34, 0.22);
 }
 .bar-line {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: 42px minmax(110px, 1fr) 92px;
   align-items: center;
   gap: 8px;
   font-size: calc(11.5px * var(--pm-text-scale));
@@ -837,7 +841,7 @@ async function createWorldbookEntryForSelected() {
 }
 .bar-label {
   font-family: var(--pm-font-display);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   color: var(--pm-ink-dim);
   font-size: calc(10px * var(--pm-text-scale));
 }
@@ -870,16 +874,19 @@ async function createWorldbookEntryForSelected() {
 }
 .char-notes {
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  color: var(--pm-ink-soft);
 }
 .char-notes p {
-  font-size: calc(12px * var(--pm-text-scale));
+  font-size: calc(11.5px * var(--pm-text-scale));
   color: var(--pm-ink-soft);
-  line-height: 1.7;
+  line-height: 1.6;
   margin: 0;
 }
 .char-notes b {
-  margin-right: 8px;
+  display: inline-block;
+  min-width: 70px;
+  margin-right: 6px;
   color: var(--pm-ink-dim);
   font-family: var(--pm-font-display);
   font-size: calc(11px * var(--pm-text-scale));
@@ -888,6 +895,7 @@ async function createWorldbookEntryForSelected() {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  padding-top: 2px;
 }
 .char-acts .pm-btn.danger {
   border-color: rgba(133, 56, 42, 0.45);
@@ -923,10 +931,8 @@ async function createWorldbookEntryForSelected() {
   display: grid;
   gap: 5px;
   margin-bottom: 10px;
-  padding: 8px;
-  border: 1px dashed rgba(110, 80, 34, 0.32);
-  border-radius: 4px;
-  background: rgba(255, 248, 226, 0.36);
+  padding: 8px 0;
+  border-block: 1px dashed rgba(110, 80, 34, 0.24);
   color: var(--pm-ink-soft);
   font-size: calc(11.5px * var(--pm-text-scale));
 }
@@ -952,9 +958,9 @@ async function createWorldbookEntryForSelected() {
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  border-radius: 8px;
-  background: rgba(255, 245, 215, 0.42);
-  border: 1px dashed rgba(110, 80, 34, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 245, 215, 0.32);
+  border: 1px solid rgba(110, 80, 34, 0.16);
   color: var(--pm-ink-soft);
 }
 .stage-list li.done {

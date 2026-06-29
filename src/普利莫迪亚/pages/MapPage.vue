@@ -1195,4 +1195,84 @@ function onNodeClick(event: MouseEvent, n: MapNode) {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 680px) {
+  .map-layout {
+    gap: 10px;
+  }
+  .map-canvas-wrap {
+    display: grid;
+    gap: 8px;
+    overflow: visible;
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .map-controls,
+  .layer-ribbon {
+    position: static;
+    max-width: none;
+  }
+  .map-controls {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
+    padding: 6px;
+    order: 1;
+  }
+  .map-controls button {
+    min-width: 0;
+    height: 30px;
+    padding: 0 5px;
+    font-size: calc(12px * var(--pm-text-scale));
+  }
+  .map-controls button[title='重置视野'] {
+    grid-column: span 2;
+  }
+  .map-controls > span {
+    grid-column: span 2;
+    min-width: 0;
+  }
+  .layer-tabs {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-left: 0;
+    border-left: 0;
+  }
+  .layer-tabs button {
+    min-width: 0;
+  }
+  .layer-ribbon {
+    order: 2;
+    padding: 7px 8px;
+    background: rgba(31, 21, 13, 0.72);
+  }
+  .layer-ribbon span {
+    display: none;
+  }
+  .map-canvas {
+    order: 3;
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+  }
+  .map-side {
+    gap: 8px;
+  }
+  .side-card {
+    padding: 10px;
+  }
+  .side-card h3 {
+    margin-bottom: 6px;
+  }
+  .legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .adj-list li {
+    grid-template-columns: 10px 1fr;
+  }
+  .adj-list .pm-btn {
+    grid-column: 2;
+    width: 100%;
+  }
+}
 </style>

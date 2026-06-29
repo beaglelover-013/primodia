@@ -23,6 +23,14 @@ import { tavernNpcActivityPools, tavernNpcConversationTopics, tavernNpcRestActiv
 
 const game = useGameStore();
 const tavernNameDraft = ref(game.tavernName);
+const settingSections = [
+  { id: 'play', label: '游玩辅助', desc: '约定 · 招牌 · 正文' },
+  { id: 'worldbook', label: '世界书', desc: '发送包 · 天气 · 行为库' },
+  { id: 'display', label: '显示外观', desc: '字体 · 主题' },
+  { id: 'save', label: '存档账本', desc: '自查 · 导入导出' },
+  { id: 'debug', label: '调试后台', desc: '提示词 · 引擎' },
+] as const;
+const activeSettingsSection = ref<(typeof settingSections)[number]['id']>('play');
 const promptDebugSnapshots = ref<PromptDebugSnapshot[]>(getPromptDebugSnapshots());
 const selectedPromptDebugId = ref(promptDebugSnapshots.value[0]?.id ?? '');
 const finalPromptDebugSnapshots = ref<FinalPromptDebugSnapshot[]>(getFinalPromptDebugSnapshots());
@@ -444,7 +452,7 @@ async function importSaveFile(event: Event) {
 </script>
 
 <template>
-  <section class="page pm-paper" id="page-settings">
+  <section id="page-settings" class="page pm-paper">
     <header class="pm-paper-head">
       <div>
         <h2 class="h-title">
@@ -455,8 +463,22 @@ async function importSaveFile(event: Event) {
       </div>
     </header>
 
+    <nav class="settings-tabs" aria-label="设置分组">
+      <button
+        v-for="section in settingSections"
+        :key="section.id"
+        class="settings-tab"
+        :class="{ active: activeSettingsSection === section.id }"
+        type="button"
+        @click="activeSettingsSection = section.id"
+      >
+        <strong>{{ section.label }}</strong>
+        <span>{{ section.desc }}</span>
+      </button>
+    </nav>
+
     <div class="pm-paper-body settings-grid">
-      <section class="settings-card pm-card npc-activity-card">
+      <section v-show="activeSettingsSection === 'play'" class="settings-card pm-card npc-activity-card">
         <h3>约定备忘录</h3>
         <p class="pm-dim">
           AI 在正文后写入 <code>&lt;promise_update&gt;</code> 时，前端会保存未来约定；到达触发时间后，会在本回合发送包里提醒一次。
@@ -508,7 +530,7 @@ async function importSaveFile(event: Event) {
           </article>
         </div>
       </section>
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'play'" class="settings-card pm-card">
         <h3>酒馆招牌</h3>
         <label class="pm-field">
           <span>酒馆名字</span>
@@ -522,7 +544,7 @@ async function importSaveFile(event: Event) {
         <p class="pm-dim">这里会同步到顶部位置、正文页和经营记录，不再强制叫铁壶酒馆。</p>
       </section>
 
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'display'" class="settings-card pm-card">
         <h3>字体与排版</h3>
         <label class="pm-field">
           <span>文字缩放</span>
@@ -543,7 +565,7 @@ async function importSaveFile(event: Event) {
         </p>
       </section>
 
-      <section class="settings-card pm-card theme-card">
+      <section v-show="activeSettingsSection === 'display'" class="settings-card pm-card theme-card">
         <h3>界面主题</h3>
         <div class="theme-grid">
           <button
@@ -566,7 +588,7 @@ async function importSaveFile(event: Event) {
         <p class="pm-dim">主题只改变前端观感，不会写入 MVU 变量，也不会发送给 AI。</p>
       </section>
 
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'play'" class="settings-card pm-card">
         <h3>正文显示</h3>
         <label class="toggle-row">
           <span>
@@ -604,7 +626,7 @@ async function importSaveFile(event: Event) {
         </label>
       </section>
 
-      <section class="settings-card pm-card npc-activity-card">
+      <section v-show="activeSettingsSection === 'worldbook'" class="settings-card pm-card npc-activity-card">
         <h3>本回合发送包 · 世界书绑定</h3>
         <p class="pm-dim">
           每回合发送前，前端会把完整发送包覆盖到固定世界书条目。没有准确绑定时会停止生成，避免工具读不到本回合内容。
@@ -633,7 +655,7 @@ async function importSaveFile(event: Event) {
         </div>
       </section>
 
-      <section class="settings-card pm-card npc-activity-card">
+      <section v-show="activeSettingsSection === 'worldbook'" class="settings-card pm-card npc-activity-card">
         <h3>天气池 · 世界书</h3>
         <p class="pm-dim">
           天气只使用读取成功的 <code>&lt;PrimordiaWeatherPool&gt;</code> 世界书天气池；没有读到或当前月份缺少条目时，不使用前端兜底天气。
@@ -714,7 +736,7 @@ async function importSaveFile(event: Event) {
         <p class="pm-dim">默认模板只用于复制到世界书里修改，不参与运行；天气池全文不会进入变量总览，也不会发给 AI。</p>
       </section>
 
-      <section class="settings-card pm-card npc-activity-card">
+      <section v-show="activeSettingsSection === 'worldbook'" class="settings-card pm-card npc-activity-card">
         <h3>后台行为库 · 世界书</h3>
         <p class="pm-dim">
           伪活人化只使用读取成功的 <code>&lt;PrimordiaNpcActivities&gt;</code> 世界书行为库；没有读到或格式报错时会保持关闭，不使用任何前端兜底行为。
@@ -831,7 +853,7 @@ async function importSaveFile(event: Event) {
         <p class="pm-dim">读取失败会关闭伪活人化并清空本次行为库缓存；模板只用于复制参考，不参与运行。</p>
       </section>
 
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'debug'" class="settings-card pm-card">
         <h3>引擎健康检查</h3>
         <ul class="health">
           <li>
@@ -862,7 +884,7 @@ async function importSaveFile(event: Event) {
         </div>
       </section>
 
-      <section class="settings-card pm-card self-check-card">
+      <section v-show="activeSettingsSection === 'save'" class="settings-card pm-card self-check-card">
         <h3>账本自查 · 只读</h3>
         <p class="pm-dim">
           这里检查前端主存档本身，不会修改钱袋、库存、地点或楼层。红色代表会破坏连续性，黄色代表需要留意。
@@ -895,7 +917,7 @@ async function importSaveFile(event: Event) {
         <pre v-if="showPromptPreview" class="json-preview debug-json">{{ promptPreview }}</pre>
       </section>
 
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'save'" class="settings-card pm-card">
         <h3>存档读写 · JSON</h3>
         <p class="pm-dim">
           支持完整结构的导入导出, 便于离线回看与跨设备同步; 实际接入 MVU 后, 读档将自动应用到 stat_data。
@@ -917,7 +939,7 @@ async function importSaveFile(event: Event) {
         <pre v-if="showSchema" class="json-preview">{{ schemaPreview }}</pre>
       </section>
 
-      <section class="settings-card pm-card prompt-debug-card">
+      <section v-show="activeSettingsSection === 'debug'" class="settings-card pm-card prompt-debug-card">
         <h3>提示词自查查看器</h3>
         <p class="pm-dim">
           这里记录前端自己送入生成接口的内容：玩家行动、injects、基础变量摘要、生成原文与整理后的楼层文本。它用于检查伪0层是否把行动和扫描词送进了叙事引擎。
@@ -957,7 +979,7 @@ async function importSaveFile(event: Event) {
         </div>
       </section>
 
-      <section class="settings-card pm-card">
+      <section v-show="activeSettingsSection === 'debug'" class="settings-card pm-card">
         <h3>调试操作</h3>
         <p class="pm-dim">仅在开发阶段使用, 直接拨动变量观察叙事反应。</p>
         <div class="debug-grid">
@@ -978,7 +1000,7 @@ async function importSaveFile(event: Event) {
           </button>
         </div>
       </section>
-      <section class="settings-card pm-card prompt-debug-card final-prompt-card">
+      <section v-show="activeSettingsSection === 'debug'" class="settings-card pm-card prompt-debug-card final-prompt-card">
         <h3>最终提示词查看器</h3>
         <p class="pm-dim">
           这里记录酒馆真正准备发送给模型的消息包。它会尽量抓取预设、世界书、聊天历史、前端注入和玩家输入，适合排查关键词世界书为什么没有触发。
@@ -1179,6 +1201,46 @@ async function importSaveFile(event: Event) {
 </template>
 
 <style scoped>
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 18px 14px;
+  border-bottom: 1px dashed var(--pm-edge-soft);
+}
+.settings-tab {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(118, 82, 38, 0.26);
+  border-radius: 8px;
+  background: rgba(255, 248, 226, 0.3);
+  color: var(--pm-ink-dim);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+.settings-tab:hover,
+.settings-tab.active {
+  border-color: rgba(190, 143, 52, 0.74);
+  background: rgba(214, 174, 89, 0.2);
+  color: var(--pm-ink);
+  transform: translateY(-1px);
+}
+.settings-tab strong {
+  font-family: var(--pm-font-display);
+  font-size: calc(13px * var(--pm-text-scale));
+  letter-spacing: 0.08em;
+}
+.settings-tab span {
+  color: var(--pm-muted);
+  font-size: calc(11px * var(--pm-text-scale));
+  line-height: 1.35;
+}
 .settings-grid {
   display: grid;
   gap: 12px;
@@ -1728,6 +1790,13 @@ async function importSaveFile(event: Event) {
   line-height: 1.55;
 }
 @media (max-width: 820px) {
+  .settings-tabs {
+    grid-template-columns: 1fr;
+    padding: 0 12px 12px;
+  }
+  .settings-tab {
+    min-height: 0;
+  }
   .prompt-debug-layout {
     grid-template-columns: 1fr;
   }

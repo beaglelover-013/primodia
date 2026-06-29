@@ -72,7 +72,7 @@ async function transferMoney(direction: 'wallet_to_cashbox' | 'cashbox_to_wallet
 </script>
 
 <template>
-  <section class="page pm-paper" id="page-ledger">
+  <section id="page-ledger" class="page pm-paper">
     <header class="pm-paper-head">
       <div>
         <h2 class="h-title">

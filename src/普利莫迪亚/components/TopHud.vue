@@ -82,7 +82,7 @@ const activeTemporaryStates = computed(() => game.flattenTemporaryStates().slice
 
     <!-- 右: 多币种 + 声望 + 精力 -->
     <div class="hud-right">
-      <div class="coins" id="hud-currency" :title="`随身钱袋 ${game.walletText}；钱匣 ${game.cashboxText}；合计 ${game.treasuryText}`">
+      <div id="hud-currency" class="coins" :title="`随身钱袋 ${game.walletText}；钱匣 ${game.cashboxText}；合计 ${game.treasuryText}`">
         <span class="fund-chip wallet">
           <PmIcon name="coin" :size="13" />
           随身 {{ game.walletText }}

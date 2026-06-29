@@ -572,8 +572,8 @@ function stripHiddenOutputTags(content: string): string {
 function messageHasScenePatch(message: string): boolean {
   const text = message || '';
   const hasReadableScenePatch = [
-    /世界[^<>{}\[\]\n]{0,20}当前地点[^<>{}\[\]\n]{0,20}(?:具体位置|地点|区域)/,
-    /主角[^<>{}\[\]\n]{0,20}所在位置/,
+    /世界[^<>{}\x5b\x5d\n]{0,20}当前地点[^<>{}\x5b\x5d\n]{0,20}(?:具体位置|地点|区域)/,
+    /主角[^<>{}\x5b\x5d\n]{0,20}所在位置/,
   ].some(pattern => pattern.test(text));
   return hasReadableScenePatch || hasLegacyCompatiblePathReference(text, ['世界.当前地点', '主角.所在位置']);
 }
@@ -581,7 +581,7 @@ function messageHasScenePatch(message: string): boolean {
 function messageHasTimePatch(message: string): boolean {
   const text = message || '';
   const hasReadableTimePatch =
-    /当前历法[^<>{}\[\]\n]{0,20}(?:年|月份序号|月序号|月份名|月|季节|日|时段|天气|时间|钟点|时|小时|分|分钟)/.test(
+    /当前历法[^<>{}\x5b\x5d\n]{0,20}(?:年|月份序号|月序号|月份名|月|季节|日|时段|天气|时间|钟点|时|小时|分|分钟)/.test(
       text,
     );
   return hasReadableTimePatch || hasLegacyCompatiblePathReference(text, ['世界.当前历法']);

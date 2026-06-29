@@ -691,8 +691,8 @@ export function parseOptions(messageContent: string): ParsedOption[] {
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean);
-  const optionPattern = /^([A-Da-d]|[1-4])[\.、)]\s*/;
-  const anyOptionPattern = /^([A-Za-z]|\d+)[\.、)]\s*/;
+  const optionPattern = /^([A-Da-d]|[1-4])[.、)]\s*/;
+  const anyOptionPattern = /^([A-Za-z]|\d+)[.、)]\s*/;
   const hasOptionPrefix = lines.some(line => anyOptionPattern.test(line));
 
   if (!hasOptionPrefix) {

@@ -902,7 +902,7 @@ function normalizeCondition(value: string | undefined): RegionFacility['conditio
 function normalizeLooseName(value: string | undefined) {
   return String(value ?? '')
     .trim()
-    .replace(/[·・•\s　_\-—路]/g, '')
+    .replace(/[·・•\s\u3000_\-—路]/g, '')
     .replace(/区域|区|房间|房|门面|接待|餐食|储藏|生活|交通/g, '');
 }
 
@@ -6037,9 +6037,9 @@ export const useGameStore = defineStore('primordia', () => {
       calendarValue && typeof calendarValue === 'object' && !Array.isArray(calendarValue)
         ? { ...(calendarValue as Record<string, unknown>) }
         : {};
-    const parts = text.split(/[\/｜|]/).map(part => part.trim()).filter(Boolean);
+    const parts = text.split(/[/｜|]/).map(part => part.trim()).filter(Boolean);
     const yearMatch = text.match(/(\d{3,4})\s*年/);
-    const monthIndexMatch = text.match(/(?:^|[\/｜|\s])(\d{1,2})\s*月(?:[\/｜|\s]|$)/);
+    const monthIndexMatch = text.match(/(?:^|[/｜|\s])(\d{1,2})\s*月(?:[/｜|\s]|$)/);
     const dayMatch = text.match(/(\d{1,2})\s*日/);
     const clockMatch = text.match(/([01]?\d|2[0-3])[:：]([0-5]\d)/);
 
@@ -6067,7 +6067,7 @@ export const useGameStore = defineStore('primordia', () => {
     if (locationValue && typeof locationValue === 'object' && !Array.isArray(locationValue)) return;
     const text = String(locationValue ?? '').trim();
     if (!text) return;
-    const parts = text.split(/[\/｜|]/).map(part => part.trim()).filter(Boolean);
+    const parts = text.split(/[/｜|]/).map(part => part.trim()).filter(Boolean);
     world['当前地点'] = {
       区域: parts[0] || location.region,
       具体位置: parts[1] || parts[0] || currentPlaceText(),
@@ -8021,7 +8021,6 @@ export const useGameStore = defineStore('primordia', () => {
     restoreGeneratedShopFromLatestMessage,
   };
 });
-
 
 
 
